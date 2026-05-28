@@ -1,0 +1,14 @@
+{
+  "name": "invoicexml-mcp",
+  "version": "1.0.0",
+  "description": "InvoiceXML MCP Server for global e-invoice compliance: Create and Validate Factur-X, ZUGFeRD, XRechnung, CII and Peppol BIS Billing 3.0 UBL invoices",
+  "mcpServers": {
+    "invoicexml": {
+      "httpUrl": "https://mcp.invoicexml.com/",
+      "oauth": {
+        "enabled": true
+      }
+    }
+  },
+  "contextFileName": "GEMINI.md"
+}
