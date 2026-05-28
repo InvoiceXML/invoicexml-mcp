@@ -1,0 +1,26 @@
+{
+  "name": "invoicexml",
+  "owner": {
+    "name": "InvoiceXML"
+  },
+  "description": "Official InvoiceXML plugin: compliant European e-invoicing (Factur-X, ZUGFeRD, XRechnung, UBL, CII, Peppol) for AI agents.",
+  "plugins": [
+    {
+      "name": "invoicexml",
+      "source": "./",
+      "displayName": "InvoiceXML",
+      "description": "Create, validate, convert, render, and extract compliant e-invoices (Factur-X, ZUGFeRD, XRechnung, UBL, CII, Peppol BIS Billing 3.0) via the hosted InvoiceXML MCP server. Signs in with OAuth; no API key required.",
+      "category": "productivity",
+      "tags": [
+        "e-invoicing",
+        "compliance",
+        "factur-x",
+        "zugferd",
+        "xrechnung",
+        "ubl",
+        "peppol",
+        "cii"
+      ]
+    }
+  ]
+}
