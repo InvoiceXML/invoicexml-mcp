@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/InvoiceXml.Mcp.Core/InvoiceXml.Mcp.Core.csproj" />
+    <Project Path="src/InvoiceXml.Mcp.Host/InvoiceXml.Mcp.Host.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/InvoiceXml.Mcp.Core.Tests/InvoiceXml.Mcp.Core.Tests.csproj" />
+    <Project Path="tests/InvoiceXml.Mcp.Host.Tests/InvoiceXml.Mcp.Host.Tests.csproj" />
+  </Folder>
+</Solution>

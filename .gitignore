@@ -427,3 +427,41 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# ---------------------------------------------------------------------------
+# Project-specific
+# ---------------------------------------------------------------------------
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Per-developer overrides — may contain API keys, connection strings, etc.
+# Production secrets belong in your host's environment variables,
+# never in a committed JSON file.
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.Local.json
+appsettings.local.json
+*.env
+.env.*
+!.env.example
+
+# dotnet user-secrets metadata file is safe to commit (it only points to a
+# per-user store outside the repo); the secrets themselves live in
+# %APPDATA%\Microsoft\UserSecrets and are never in the working tree.
+
+# Rider / JetBrains
+.idea/
+
+# Test results / coverage
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# Local NuGet packing output
+*.nupkg
+*.snupkg
+.nuget-local/
