@@ -1,0 +1,12 @@
+{
+  "name": "invoicexml",
+  "displayName": "InvoiceXML",
+  "version": "1.0.0",
+  "description": "Create, validate, convert and extract compliant e-invoices (Factur-X, ZUGFeRD, XRechnung, UBL, Peppol BIS 3.0)",
+  "author": {
+    "name": "InvoiceXML",
+    "email": "support@invoicexml.com"
+  },
+  "license": "MIT",
+  "keywords": ["e-invoicing", "factur-x", "zugferd", "xrechnung", "ubl", "peppol", "en16931", "compliance", "invoice"]
+}
