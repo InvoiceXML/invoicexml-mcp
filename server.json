@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.invoicexml/invoicexml",
+  "name": "com.invoicexml/invoicexml",
   "title": "InvoiceXML",
   "description": "Create, validate, convert & extract compliant e-invoices (UBL, Factur-X, ZUGFeRD, XRechnung)",
   "version": "1.0.0",
