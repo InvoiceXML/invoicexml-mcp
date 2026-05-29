@@ -4,14 +4,37 @@
   "title": "InvoiceXML",
   "description": "Create, validate, convert & extract compliant e-invoices (UBL, Factur-X, ZUGFeRD, XRechnung)",
   "version": "1.0.0",
+  "websiteUrl": "https://www.invoicexml.com/mcp-server",
   "repository": {
     "url": "https://github.com/InvoiceXML/invoicexml-mcp",
     "source": "github"
   },
+  "icons": [
+    {
+      "src": "https://www.invoicexml.com/favicon/favicon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": ["any"]
+    },
+    {
+      "src": "https://www.invoicexml.com/favicon/apple-touch-icon.png",
+      "mimeType": "image/png",
+      "sizes": ["180x180"]
+    }
+  ],
   "remotes": [
     {
       "type": "streamable-http",
       "url": "https://mcp.invoicexml.com"
     }
-  ]
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "tagline": "Global, compliant e-invoicing for AI agents",
+      "longDescription": "InvoiceXML lets AI agents create, validate, convert, render, and extract compliant electronic invoices across UBL (Peppol BIS Billing 3.0), CII, Factur-X, ZUGFeRD, and XRechnung, all validated against the EN 16931 standard. Hosted with OAuth 2.1, processed statelessly, and never retained.",
+      "websiteUrl": "https://www.invoicexml.com/mcp-server",
+      "documentationUrl": "https://www.invoicexml.com/docs",
+      "categories": ["finance", "productivity"],
+      "tags": ["e-invoicing", "compliance", "factur-x", "zugferd", "xrechnung", "ubl", "peppol", "cii", "en16931"]
+    }
+  }
 }
