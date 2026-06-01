@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "facturx-web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--no-build", "--project", "C:/Development/facturx-invoice/FacturXInvoice.Web/FacturXInvoice.Web.csproj", "--urls", "http://localhost:5203"],
+      "port": 5203
+    }
+  ]
+}

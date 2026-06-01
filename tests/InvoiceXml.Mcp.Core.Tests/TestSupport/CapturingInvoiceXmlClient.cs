@@ -49,6 +49,11 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     public byte[]? LastConvertContent { get; private set; }
     public string? LastConvertContentType { get; private set; }
 
+    public InvoiceFormat? LastTransformTarget { get; private set; }
+    public byte[]? LastTransformPdf { get; private set; }
+    public PdfLanguage? LastTransformLanguage { get; private set; }
+    public string? LastTransformBuyerReference { get; private set; }
+
     public Task<CreateInvoiceResult> CreateInvoiceAsync(
         InvoiceFormat format, InvoiceDocument invoice, PdfRenderOptions? options, CancellationToken cancellationToken = default)
         => throw new NotImplementedException();
@@ -102,6 +107,16 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
         LastConvertTarget = target;
         LastConvertContent = content;
         LastConvertContentType = contentType;
+        return Task.FromResult(_artifact);
+    }
+
+    public Task<DocumentArtifact> TransformAsync(
+        InvoiceFormat target, byte[] pdf, PdfLanguage language, string? buyerReference, CancellationToken cancellationToken = default)
+    {
+        LastTransformTarget = target;
+        LastTransformPdf = pdf;
+        LastTransformLanguage = language;
+        LastTransformBuyerReference = buyerReference;
         return Task.FromResult(_artifact);
     }
 }

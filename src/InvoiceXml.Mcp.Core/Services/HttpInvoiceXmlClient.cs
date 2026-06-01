@@ -176,6 +176,32 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         return SendForArtifactAsync(path, form, $"invoice-{Slug(target)}.{ext}", cancellationToken);
     }
 
+    public Task<DocumentArtifact> TransformAsync(
+        InvoiceFormat target,
+        byte[] pdf,
+        PdfLanguage language,
+        string? buyerReference,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(pdf);
+        if (pdf.Length == 0)
+            throw new ArgumentException("PDF bytes must not be empty.", nameof(pdf));
+
+        var form = new MultipartFormDataContent();
+        form.Add(FilePart(pdf, "application/pdf"), "file", "invoice.pdf");
+
+        // The XRechnung route needs an explicit buyer reference (BT-10); the hybrid-PDF
+        // routes take a language for the visual face. Other routes ignore extra fields.
+        if (target is InvoiceFormat.XRechnung)
+            form.Add(new StringContent(buyerReference ?? string.Empty), "buyerReference");
+        else if (target is InvoiceFormat.FacturX or InvoiceFormat.Zugferd)
+            form.Add(new StringContent(language.ToString().ToLowerInvariant()), "language");
+
+        var path = $"{ApiVersionPrefix}/transform/to/{Slug(target)}";
+        var ext = target is InvoiceFormat.FacturX or InvoiceFormat.Zugferd ? "pdf" : "xml";
+        return SendForArtifactAsync(path, form, $"invoice-{Slug(target)}.{ext}", cancellationToken);
+    }
+
     private static ByteArrayContent FilePart(byte[] bytes, string contentType)
     {
         var part = new ByteArrayContent(bytes);

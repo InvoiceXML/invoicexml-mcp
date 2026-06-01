@@ -87,4 +87,21 @@ public interface IInvoiceXmlClient
         string contentType,
         string fileName,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Calls <c>POST /v1/transform/to/{target}</c> with the supplied PDF uploaded as
+    /// <c>multipart/form-data</c>. Unlike <see cref="ConvertAsync"/> (a deterministic
+    /// transcode of already-embedded XML), this runs data extraction over the PDF, so
+    /// it also handles a plain (non-hybrid) PDF invoice, and rebuilds it in the target
+    /// format. XML targets (ubl/cii/xrechnung) return XML; hybrid-PDF targets
+    /// (facturx/zugferd) return a PDF/A-3. <paramref name="language"/> sets the
+    /// human-readable PDF face for hybrid targets; <paramref name="buyerReference"/>
+    /// supplies the BT-10 buyer reference required by XRechnung.
+    /// </summary>
+    Task<DocumentArtifact> TransformAsync(
+        InvoiceFormat target,
+        byte[] pdf,
+        PdfLanguage language,
+        string? buyerReference,
+        CancellationToken cancellationToken = default);
 }

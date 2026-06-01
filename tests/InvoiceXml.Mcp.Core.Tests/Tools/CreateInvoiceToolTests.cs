@@ -190,6 +190,10 @@ public class CreateInvoiceToolTests
         public Task<DocumentArtifact> ConvertAsync(
             InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
+
+        public Task<DocumentArtifact> TransformAsync(
+            InvoiceFormat target, byte[] pdf, PdfLanguage language, string? buyerReference, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
     }
 
     private sealed class ThrowingInvoiceXmlClient(Exception ex) : IInvoiceXmlClient
@@ -221,6 +225,10 @@ public class CreateInvoiceToolTests
 
         public Task<DocumentArtifact> ConvertAsync(
             InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
+            => Task.FromException<DocumentArtifact>(ex);
+
+        public Task<DocumentArtifact> TransformAsync(
+            InvoiceFormat target, byte[] pdf, PdfLanguage language, string? buyerReference, CancellationToken cancellationToken = default)
             => Task.FromException<DocumentArtifact>(ex);
     }
 }
