@@ -52,7 +52,13 @@ public sealed class TransformInvoiceTool
         "\n" +
         "On success the result is a short summary plus the document: XML targets inline as text, " +
         "PDF (facturx/zugferd) targets as an embedded resource attachment. On failure the result has isError=true " +
-        "and a JSON body with { success:false, failureCategory, errors[], guidance }.")]
+        "and a JSON body with { success:false, failureCategory, errors[], guidance, invoiceData? }.\n" +
+        "\n" +
+        "RECOVERY: when failureCategory is 'Validation' the body also carries 'invoiceData', the EN 16931 " +
+        "invoice this tool managed to extract from the PDF. Do NOT just retry transform_invoice with the same PDF " +
+        "(it re-extracts and fails the same way), and this tool has no field arguments to push corrections into. " +
+        "Instead tell the user which fields in 'errors' are missing or invalid; once they supply the values, merge " +
+        "them into the 'invoiceData' object and call create_invoice with that document and this same target format.")]
     public async Task<CallToolResult> TransformInvoiceAsync(
         [Description("Target format. One of: ubl, cii, xrechnung, facturx, zugferd.")]
         InvoiceFormat targetFormat,

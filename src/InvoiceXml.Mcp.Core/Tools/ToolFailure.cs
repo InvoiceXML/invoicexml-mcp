@@ -102,7 +102,13 @@ internal static class ToolFailure
             "The invoice failed server-side validation. Each entry in 'errors' has " +
             "a 'message' (human-readable reason), 'btCodes' (EN 16931 Business Term ids) " +
             "and 'fields' (JSON paths into the request body). Fix the indicated fields " +
-            "and call this tool again. Stop retrying if the same errors persist across attempts.",
+            "and call this tool again. Stop retrying if the same errors persist across attempts. " +
+            "If the failure includes an 'invoiceData' object, it is the invoice the API already " +
+            "parsed from this request (the extracted document for transform_invoice/convert_invoice, " +
+            "or the document you sent to create_invoice). Prefer correcting the fields named in 'errors' " +
+            "directly on that 'invoiceData' object and calling create_invoice with it (plus the originally " +
+            "requested target format), rather than re-running an extraction-based tool that would only " +
+            "reproduce the same errors.",
 
         ToolFailureCategory.Unauthorized =>
             "The MCP server's InvoiceXML credentials were rejected. This is a server " +

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using InvoiceXml.Mcp.Core.Models;
 
 namespace InvoiceXml.Mcp.Core.Tools;
@@ -55,4 +56,13 @@ public sealed class ToolFailurePayload
 
     /// <summary>Plain-language hint for the LLM about whether and how to retry.</summary>
     public string? Guidance { get; init; }
+
+    /// <summary>
+    /// For a <see cref="ToolFailureCategory.Validation"/> failure, the invoice document the
+    /// API extracted/parsed, echoed back as a BT-first EN 16931 JSON object. Present so the
+    /// caller can correct the fields named in <see cref="Errors"/> on THIS document and call
+    /// <c>create_invoice</c> with it, instead of re-running an extraction-based tool (which
+    /// would reproduce the same errors). <see langword="null"/> when the API did not return one.
+    /// </summary>
+    public JsonElement? InvoiceData { get; init; }
 }

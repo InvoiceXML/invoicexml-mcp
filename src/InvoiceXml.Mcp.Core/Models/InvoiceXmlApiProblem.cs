@@ -36,6 +36,17 @@ public sealed class InvoiceXmlApiProblem
     [JsonPropertyName("errors")]
     public IReadOnlyList<ValidationFinding>? Errors { get; init; }
 
+    /// <summary>
+    /// The invoice document the API extracted/parsed for this request, echoed back as a
+    /// BT-first EN 16931 JSON object on a validation failure (extraction-based endpoints
+    /// such as <c>/transform</c> and <c>/convert</c>, and <c>/create</c>). Present so a
+    /// caller can correct the indicated fields on THIS document and call <c>create_invoice</c>
+    /// with it, instead of re-running an extraction that would reproduce the same errors.
+    /// <see langword="null"/> when the API did not return one.
+    /// </summary>
+    [JsonPropertyName("invoiceData")]
+    public JsonElement? InvoiceData { get; init; }
+
     /// <summary>Catch-all for additional fields the API may add over time.</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Additional { get; init; }

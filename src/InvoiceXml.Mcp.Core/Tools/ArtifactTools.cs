@@ -93,6 +93,7 @@ internal static class ArtifactTools
             StatusCode = t.StatusCode,
             Errors = t.Errors,
             Guidance = t.Guidance,
+            InvoiceData = t.Problem?.InvoiceData,
         });
 
     private static CallToolResult ToInputFailure(ValidationResult error, string? formatSlug)

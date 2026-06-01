@@ -47,9 +47,10 @@ public sealed class CreateInvoiceTool
         "DO NOT attempt to read or quote the PDF bytes — refer to the file by its name in your response to the user. " +
         "\n\n" +
         "On failure the result has isError=true and a single JSON content block with " +
-        "{ success: false, failureCategory, statusCode, errors[], guidance }. " +
+        "{ success: false, failureCategory, statusCode, errors[], guidance, invoiceData? }. " +
         "If failureCategory is 'Validation', the errors array tells you which fields to fix " +
-        "(each entry has 'message', EN 16931 'btCodes', and JSON 'fields' paths); call this tool again with the corrections. " +
+        "(each entry has 'message', EN 16931 'btCodes', and JSON 'fields' paths), and 'invoiceData' echoes back " +
+        "the document the API parsed; correct the named fields on that 'invoiceData' object and call this tool again with it. " +
         "If failureCategory is 'Unauthorized', 'Forbidden', 'Network', or 'Client', do not retry; surface the failure to the user.")]
     public async Task<CallToolResult> CreateInvoiceAsync(
         [Description("Target e-invoicing format. Must be one of: ubl, cii, xrechnung, facturx, zugferd.")]
@@ -113,6 +114,7 @@ public sealed class CreateInvoiceTool
             StatusCode = t.StatusCode,
             Errors = t.Errors,
             Guidance = t.Guidance,
+            InvoiceData = t.Problem?.InvoiceData,
         };
 
     private static bool IsTextContentType(string contentType) =>
