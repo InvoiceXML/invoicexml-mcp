@@ -55,7 +55,7 @@ public class CreateInvoiceToolTests
         var result = await tool.CreateInvoiceAsync(
             InvoiceFormat.FacturX,
             new InvoiceDocument { InvoiceNumber = "1", Currency = "EUR" },
-            new PdfRenderOptions { Language = PdfLanguage.EN },
+            new CreateInvoiceOptions { Language = PdfLanguage.EN },
             CancellationToken.None);
 
         Assert.False(result.IsError ?? false);
@@ -164,7 +164,7 @@ public class CreateInvoiceToolTests
         public Task<CreateInvoiceResult> CreateInvoiceAsync(
             InvoiceFormat format,
             InvoiceDocument invoice,
-            PdfRenderOptions? options,
+            CreateInvoiceOptions? options,
             CancellationToken cancellationToken = default) => Task.FromResult(result);
 
         public Task<ValidationResult> ValidateXmlAsync(
@@ -199,7 +199,7 @@ public class CreateInvoiceToolTests
     private sealed class ThrowingInvoiceXmlClient(Exception ex) : IInvoiceXmlClient
     {
         public Task<CreateInvoiceResult> CreateInvoiceAsync(
-            InvoiceFormat format, InvoiceDocument invoice, PdfRenderOptions? options,
+            InvoiceFormat format, InvoiceDocument invoice, CreateInvoiceOptions? options,
             CancellationToken cancellationToken = default)
             => Task.FromException<CreateInvoiceResult>(ex);
 

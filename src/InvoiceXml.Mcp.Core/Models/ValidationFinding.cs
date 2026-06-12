@@ -13,6 +13,14 @@ public sealed class ValidationFinding
     /// <summary>Identifier of the violated rule (e.g. <c>BR-CO-15</c>, <c>PDF-EMBED</c>).</summary>
     public string? Rule { get; init; }
 
+    /// <summary>
+    /// Validation layer that produced the finding: <c>xsd</c> (structure),
+    /// <c>en16931</c> (European standard base rules), or <c>cius</c> (the
+    /// profile overlay: Peppol BIS, XRechnung, NLCIUS, PINT or the
+    /// Factur-X/ZUGFeRD profile rules).
+    /// </summary>
+    public string? Layer { get; init; }
+
     /// <summary>Line number in the source XML, when known.</summary>
     public int? Line { get; init; }
 

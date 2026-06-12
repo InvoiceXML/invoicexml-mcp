@@ -9,8 +9,9 @@ namespace InvoiceXml.Mcp.Core.Tools;
 
 /// <summary>
 /// MCP tool that validates hybrid PDF/A-3 e-invoices (Factur-X, ZUGFeRD) via
-/// <c>/v1/validate/{format}</c>. The tool extracts the embedded XML on the
-/// server side and runs it through the EN 16931 pipeline.
+/// <c>/v1/validate/{format}</c>. The API extracts the embedded XML server-side
+/// and validates it against the conformance profile it declares (MINIMUM
+/// through EXTENDED, or XRechnung), using the official per-profile rules.
 /// </summary>
 [McpServerToolType]
 public sealed class ValidatePdfInvoiceTool
@@ -31,20 +32,29 @@ public sealed class ValidatePdfInvoiceTool
         "Use THIS tool for PDF invoices; for plain XML (UBL / CII / XRechnung) use 'validate_xml_invoice'. " +
         "\n\n" +
         "Provide the PDF via EXACTLY ONE of these inputs:\n" +
-        "• pdfUrl — a public https:// URL to the PDF; the server downloads it. PREFER THIS whenever a URL exists.\n" +
-        "• pdfBase64 — the PDF as base64. Only practical for small files (a few tens of KB); larger base64 gets " +
+        "• pdfUrl: a public https:// URL to the PDF; the server downloads it. PREFER THIS whenever a URL exists.\n" +
+        "• pdfBase64: the PDF as base64. Only practical for small files (a few tens of KB); larger base64 gets " +
         "corrupted when written into a tool call, so use a URL instead.\n" +
         "If you set neither or both, the result is valid=false with an INPUT-… error explaining what to fix.\n" +
         "\n" +
         "Only use the ACTUAL bytes of the file. Never reconstruct, guess, or synthesize a PDF. " +
         "If you cannot access the real file (e.g. a user uploaded it and you can't read its bytes), do NOT call " +
-        "this tool with made-up content — ask the user for a public https:// URL (use pdfUrl) or to paste the file's base64.\n" +
+        "this tool with made-up content; ask the user for a public https:// URL (use pdfUrl) or to paste the file's base64.\n" +
         "\n" +
+        "The embedded XML is located under any spec attachment name (factur-x.xml, the legacy zugferd-invoice.xml, " +
+        "or xrechnung.xml for the ZUGFeRD XRechnung reference profile) and validated against the conformance " +
+        "profile it declares (MINIMUM, BASIC WL, BASIC, EN 16931, EXTENDED, or XRechnung), using the official " +
+        "per-profile rules. The response reports the applied profile in data.profile and the declared identifier " +
+        "in data.customizationId; every finding carries a 'layer' field (xsd, en16931, or cius). " +
+        "\n\n" +
         "The result has a 'valid' field. On valid=true the embedded invoice is compliant ('warnings' may carry " +
-        "non-blocking issues). On valid=false the 'errors' array explains what was wrong (e.g. PDF-EMBED when no " +
-        "XML is embedded, or specific EN 16931 rule failures). Surface these to the user.")]
+        "non-blocking issues; a PROFILE-SCOPE warning means a MINIMUM / BASIC WL document that does not qualify " +
+        "as an e-invoice under German B2B rules). On valid=false the 'errors' array explains what was wrong: " +
+        "PDF-EMBED when no XML is embedded, PDF-EMBED-SYNTAX when the attachment is UBL instead of CII " +
+        "(suggest validate_xml_invoice with format 'ubl' for the extracted file), or specific rule failures. " +
+        "Surface these to the user.")]
     public async Task<ValidationResult> ValidatePdfAsync(
-        [Description("Validation profile. Must be one of: facturx, zugferd.")]
+        [Description("Validation endpoint. Must be one of: facturx, zugferd (same pipeline; pick the one the user named). The conformance profile is detected automatically from the embedded XML.")]
         PdfInvoiceFormat format,
 
         CancellationToken cancellationToken,
@@ -91,11 +101,11 @@ public sealed class ValidatePdfInvoiceTool
 
         // Safety net: catch truncated / fabricated PDFs (a %PDF header with no %%EOF
         // trailer) before spending an API credit. Gated on the %PDF prefix so non-PDF
-        // payloads are passed straight through — the API gives the better error there.
+        // payloads are passed straight through; the API gives the better error there.
         if (PdfSniffer.IsIncompletePdf(bytes))
         {
             return FileInputResolver.InputError("INPUT-INCOMPLETE-PDF",
-                $"Received {bytes.Length:N0} bytes that start like a PDF but have no %%EOF trailer — " +
+                $"Received {bytes.Length:N0} bytes that start like a PDF but have no %%EOF trailer; " +
                 "the file is truncated or was reconstructed. If you don't have the real file bytes, " +
                 "do not rebuild them: pass a public https:// URL via pdfUrl instead.",
                 ["pdfBase64", "pdfUrl"]);

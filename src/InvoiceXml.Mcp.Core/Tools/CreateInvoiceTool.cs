@@ -41,10 +41,17 @@ public sealed class CreateInvoiceTool
         "'facturx' for French and German private sector (hybrid PDF), " +
         "'zugferd' for German private sector (hybrid PDF). " +
         "\n\n" +
+        "Format 'ubl' produces Peppol BIS Billing 3.0 by default (stamped and validated against the Peppol rules, " +
+        "so buyer and seller electronic addresses are effectively required); set options.profile to target another " +
+        "CIUS instead: 'en16931' (plain EN 16931, no Peppol requirements), 'nlcius' (Netherlands), 'ehf' (Norway), " +
+        "'xrechnung' (German B2G in UBL syntax), or 'pint' (Peppol International). The output's CustomizationID " +
+        "always matches the rules it was validated against. Format 'xrechnung' accepts options.version " +
+        "('3.0', the version currently in force; omit for the effective default). " +
+        "\n\n" +
         "On success the tool result contains a short summary plus the generated artefact. " +
         "XML formats include the XML text inline as a second text block (you may quote or explain it). " +
         "PDF formats deliver the file as an embedded resource attachment alongside the summary; " +
-        "DO NOT attempt to read or quote the PDF bytes — refer to the file by its name in your response to the user. " +
+        "DO NOT attempt to read or quote the PDF bytes; refer to the file by its name in your response to the user. " +
         "\n\n" +
         "On failure the result has isError=true and a single JSON content block with " +
         "{ success: false, failureCategory, statusCode, errors[], guidance, invoiceData? }. " +
@@ -59,8 +66,11 @@ public sealed class CreateInvoiceTool
         [Description("The invoice document. EN 16931 BT-first model: at minimum supply invoiceNumber, currency, seller, buyer, lines, totals and vatBreakdowns.")]
         InvoiceDocument invoice,
 
-        [Description("Optional PDF render settings. Ignored for XML formats. Defaults to English face with no brand colour.")]
-        PdfRenderOptions? options,
+        [Description(
+            "Optional creation settings: 'profile' (UBL CIUS selection, format 'ubl' only), " +
+            "'version' (XRechnung spec version, format 'xrechnung' only), and the hybrid-PDF visual settings " +
+            "'language', 'brandColor' and 'pdfUrl' (formats 'facturx'/'zugferd' only). Every field is optional.")]
+        CreateInvoiceOptions? options,
 
         CancellationToken cancellationToken)
     {
@@ -87,7 +97,7 @@ public sealed class CreateInvoiceTool
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // HttpClient timeouts surface as TaskCanceledException with no caller cancellation —
+            // HttpClient timeouts surface as TaskCanceledException with no caller cancellation:
             // treat as a network-class failure rather than letting it propagate as a generic crash.
             return ToolResults.ForFailure(BuildFailurePayload(format, ToolFailure.FromNetworkException(ex)));
         }

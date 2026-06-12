@@ -152,7 +152,7 @@ public class ValidatePdfInvoiceToolTests
     private sealed class ThrowingValidationClient(Exception ex) : Interfaces.IInvoiceXmlClient
     {
         public Task<Models.CreateInvoiceResult> CreateInvoiceAsync(
-            InvoiceFormat format, Models.InvoiceDocument invoice, Models.PdfRenderOptions? options, CancellationToken ct = default)
+            InvoiceFormat format, Models.InvoiceDocument invoice, Models.CreateInvoiceOptions? options, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public Task<Models.ValidationResult> ValidateXmlAsync(

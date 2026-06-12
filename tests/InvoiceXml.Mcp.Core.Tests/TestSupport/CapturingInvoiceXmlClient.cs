@@ -55,7 +55,7 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     public string? LastTransformBuyerReference { get; private set; }
 
     public Task<CreateInvoiceResult> CreateInvoiceAsync(
-        InvoiceFormat format, InvoiceDocument invoice, PdfRenderOptions? options, CancellationToken cancellationToken = default)
+        InvoiceFormat format, InvoiceDocument invoice, CreateInvoiceOptions? options, CancellationToken cancellationToken = default)
         => throw new NotImplementedException();
 
     public Task<ValidationResult> ValidateXmlAsync(

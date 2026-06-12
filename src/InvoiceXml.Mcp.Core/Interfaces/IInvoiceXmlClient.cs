@@ -22,7 +22,7 @@ public interface IInvoiceXmlClient
     Task<CreateInvoiceResult> CreateInvoiceAsync(
         InvoiceFormat format,
         InvoiceDocument invoice,
-        PdfRenderOptions? options,
+        CreateInvoiceOptions? options,
         CancellationToken cancellationToken = default);
 
     /// <summary>

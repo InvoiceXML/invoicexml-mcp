@@ -26,7 +26,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
     public async Task<CreateInvoiceResult> CreateInvoiceAsync(
         InvoiceFormat format,
         InvoiceDocument invoice,
-        PdfRenderOptions? options,
+        CreateInvoiceOptions? options,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(invoice);
@@ -34,7 +34,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         var requestBody = new CreateInvoiceRequest
         {
             Invoice = invoice,
-            Options = options ?? new PdfRenderOptions(),
+            Options = options ?? new CreateInvoiceOptions(),
         };
 
         var path = $"{ApiVersionPrefix}/create/{Slug(format)}";

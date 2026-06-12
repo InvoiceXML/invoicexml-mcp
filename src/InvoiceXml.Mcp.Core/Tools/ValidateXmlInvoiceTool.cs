@@ -31,21 +31,29 @@ public sealed class ValidateXmlInvoiceTool
         "'xrechnung' for German XRechnung (CIUS-XR). " +
         "Use THIS tool for plain XML; for Factur-X / ZUGFeRD hybrid PDFs use 'validate_pdf_invoice'. " +
         "\n\n" +
+        "The conformance profile is detected automatically from the document's specification identifier (BT-24) " +
+        "and the matching rule set is applied: for 'ubl' that covers Peppol BIS 3.0, plain EN 16931, XRechnung, " +
+        "NLCIUS, EHF and PINT; for 'cii' the Factur-X/ZUGFeRD profile ladder (MINIMUM to EXTENDED). The response " +
+        "reports what ran in data.profile (slug) and data.customizationId, and every finding carries a 'layer' " +
+        "field (xsd, en16931, or cius). A PROFILE-DETECTION warning means the declared profile has no dedicated " +
+        "rule set and the EN 16931 base rules were applied; a PROFILE-SCOPE warning means the document is a " +
+        "header-only MINIMUM / BASIC WL booking aid that does not qualify as an e-invoice under German B2B rules. " +
+        "\n\n" +
         "Provide the XML via EXACTLY ONE of these inputs:\n" +
-        "• xml — the XML document as text. Good for documents that fit comfortably in one tool call.\n" +
-        "• xmlUrl — a public https:// URL to the XML; the server downloads it. PREFER THIS for large documents " +
+        "• xml: the XML document as text. Good for documents that fit comfortably in one tool call.\n" +
+        "• xmlUrl: a public https:// URL to the XML; the server downloads it. PREFER THIS for large documents " +
         "(long inline XML can get corrupted when written into a tool call).\n" +
         "If you set neither or both, the result is valid=false with an INPUT-… error explaining what to fix.\n" +
         "\n" +
         "Only use the ACTUAL text of the file. Never reconstruct, guess, or synthesize invoice XML. " +
         "If you cannot access the real file (e.g. a user uploaded it and you can't read its contents), do NOT call " +
-        "this tool with made-up XML — ask the user for a public https:// URL (use xmlUrl) or to paste the document.\n" +
+        "this tool with made-up XML; ask the user for a public https:// URL (use xmlUrl) or to paste the document.\n" +
         "\n" +
         "The result has a 'valid' field. On valid=true the invoice passed every layer ('warnings' may still carry " +
         "non-blocking issues). On valid=false the 'errors' array lists each rule failure with its EN 16931 BT codes; " +
         "explain these to the user and you may suggest corrections.")]
     public async Task<ValidationResult> ValidateXmlAsync(
-        [Description("Validation profile. Must be one of: ubl, cii, xrechnung.")]
+        [Description("Validation endpoint matching the document's syntax. Must be one of: ubl, cii, xrechnung. The conformance profile within that syntax is detected automatically.")]
         XmlInvoiceFormat format,
 
         CancellationToken cancellationToken,

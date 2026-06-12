@@ -48,7 +48,7 @@ public class HttpInvoiceXmlClientTests
         var result = await client.CreateInvoiceAsync(
             InvoiceFormat.FacturX,
             new InvoiceDocument { InvoiceNumber = "1", Currency = "EUR" },
-            new PdfRenderOptions { Language = PdfLanguage.DE, BrandColor = "#1F4E79" },
+            new CreateInvoiceOptions { Language = PdfLanguage.DE, BrandColor = "#1F4E79" },
             CancellationToken.None);
 
         Assert.Equal("/v1/create/facturx", handler.LastRequest!.RequestUri!.AbsolutePath);
@@ -73,6 +73,85 @@ public class HttpInvoiceXmlClientTests
         Assert.StartsWith("multipart/form-data", handler.LastRequest.Content!.Headers.ContentType!.MediaType);
         Assert.True(result.Valid);
         Assert.Equal("UBL 2.1", result.Data?.ConformanceLevel);
+    }
+
+    [Fact]
+    public async Task CreateInvoiceAsync_SerializesProfileAndVersionOptions()
+    {
+        var responsePayload = "<Invoice xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:Invoice-2\" />"u8.ToArray();
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, responsePayload, "application/xml", "invoice-7-ubl.xml"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        await client.CreateInvoiceAsync(
+            InvoiceFormat.Ubl,
+            new InvoiceDocument { InvoiceNumber = "7", Currency = "EUR" },
+            new CreateInvoiceOptions { Profile = "nlcius", Version = "3.0" },
+            CancellationToken.None);
+
+        Assert.Contains("\"profile\":\"nlcius\"", handler.LastRequestBody);
+        Assert.Contains("\"version\":\"3.0\"", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task CreateInvoiceAsync_OmitsUnsetOptionsFromTheWire()
+    {
+        var responsePayload = "<Invoice xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:Invoice-2\" />"u8.ToArray();
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, responsePayload, "application/xml", "invoice-8-ubl.xml"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        await client.CreateInvoiceAsync(
+            InvoiceFormat.Ubl,
+            new InvoiceDocument { InvoiceNumber = "8", Currency = "EUR" },
+            options: null,
+            CancellationToken.None);
+
+        // Null-valued options must not appear on the wire, so the API's own
+        // defaulting (e.g. profile peppol-bis-3) stays in charge.
+        Assert.DoesNotContain("\"profile\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"version\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"pdfUrl\"", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task ValidateXmlAsync_ParsesProfileCustomizationIdAndLayer()
+    {
+        var json = """
+        {
+          "valid": true,
+          "detail": "Your invoice is UBL 2.1 compliant and meets the Peppol BIS Billing 3.0 rules.",
+          "data": {
+            "schemaValid": true,
+            "schematronValid": true,
+            "conformanceLevel": "UBL 2.1",
+            "profile": "peppol-bis-3",
+            "customizationId": "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0"
+          },
+          "errors": [],
+          "warnings": [
+            {
+              "rule": "PROFILE-DETECTION",
+              "layer": "cius",
+              "line": null,
+              "message": "advisory",
+              "btCodes": [],
+              "fields": [],
+              "raw": "[PROFILE-DETECTION] CIUS: advisory"
+            }
+          ]
+        }
+        """;
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        var result = await client.ValidateXmlAsync(XmlInvoiceFormat.Ubl, "<Invoice/>", CancellationToken.None);
+
+        Assert.Equal("peppol-bis-3", result.Data?.Profile);
+        Assert.Contains("poacc:billing:3.0", result.Data?.CustomizationId);
+        var warning = Assert.Single(result.Warnings!);
+        Assert.Equal("cius", warning.Layer);
+        Assert.Equal("PROFILE-DETECTION", warning.Rule);
     }
 
     [Fact]

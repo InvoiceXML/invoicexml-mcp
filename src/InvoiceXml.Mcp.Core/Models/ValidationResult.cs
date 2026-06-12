@@ -23,7 +23,7 @@ public sealed class ValidationResult
     /// <summary>Hard validation errors that caused the invoice to be rejected.</summary>
     public IReadOnlyList<ValidationFinding>? Errors { get; init; }
 
-    /// <summary>Validation warnings — invoice passed, but these should be reviewed.</summary>
+    /// <summary>Validation warnings: invoice passed, but these should be reviewed.</summary>
     public IReadOnlyList<ValidationFinding>? Warnings { get; init; }
 
     /// <summary>
@@ -45,8 +45,22 @@ public sealed class ValidationData
     /// <summary>True when the XML passed the EN 16931 / CIUS Schematron layer.</summary>
     public bool? SchematronValid { get; init; }
 
-    /// <summary>Name of the conformance profile detected (e.g. <c>EN16931</c>, <c>UBL 2.1</c>, <c>XRechnung</c>).</summary>
+    /// <summary>Coarse conformance label of the endpoint (e.g. <c>EN16931</c>, <c>UBL 2.1</c>, <c>XRechnung</c>).</summary>
     public string? ConformanceLevel { get; init; }
+
+    /// <summary>
+    /// The profile whose rules were applied, as a stable slug detected from the
+    /// document's specification identifier (BT-24): <c>peppol-bis-3</c>,
+    /// <c>en16931</c>, <c>nlcius</c>, <c>ehf</c>, <c>xrechnung</c>, <c>pint</c>
+    /// for UBL, or <c>minimum</c> / <c>basic-wl</c> / <c>basic</c> /
+    /// <c>en16931</c> / <c>extended</c> / <c>xrechnung</c> for CII. Null when
+    /// the declared identifier has no dedicated rule set; the EN 16931 base
+    /// rules are applied instead and a <c>PROFILE-DETECTION</c> warning says so.
+    /// </summary>
+    public string? Profile { get; init; }
+
+    /// <summary>The specification identifier (BT-24) exactly as declared by the document.</summary>
+    public string? CustomizationId { get; init; }
 
     /// <summary>For PDF formats: whether an embedded XML was found in the PDF/A-3 attachment.</summary>
     public bool? HasEmbeddedXml { get; init; }

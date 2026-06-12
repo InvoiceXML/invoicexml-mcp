@@ -7,5 +7,5 @@ namespace InvoiceXml.Mcp.Core.Models;
 internal sealed class CreateInvoiceRequest
 {
     public required InvoiceDocument Invoice { get; init; }
-    public PdfRenderOptions Options { get; init; } = new();
+    public CreateInvoiceOptions Options { get; init; } = new();
 }
