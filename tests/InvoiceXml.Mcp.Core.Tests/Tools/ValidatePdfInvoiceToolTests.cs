@@ -163,12 +163,16 @@ public class ValidatePdfInvoiceToolTests
             PdfInvoiceFormat format, byte[] pdf, CancellationToken ct = default)
             => Task.FromException<Models.ValidationResult>(ex);
 
+        public Task<Models.ValidationReportPdfResult> ValidationReportPdfAsync(
+            InvoiceFormat format, byte[] content, string contentType, string fileName, CancellationToken ct = default)
+            => Task.FromException<Models.ValidationReportPdfResult>(ex);
+
         public Task<Models.DocumentArtifact> RenderToPdfAsync(
             XmlInvoiceFormat format, string xml, PdfLanguage language, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public Task<Models.DocumentArtifact> ExtractAsync(
-            ExtractTarget target, byte[] pdf, CancellationToken ct = default)
+            ExtractTarget target, byte[] content, string contentType, string fileName, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public Task<Models.DocumentArtifact> EmbedAsync(

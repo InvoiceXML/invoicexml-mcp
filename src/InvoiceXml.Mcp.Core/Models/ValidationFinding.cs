@@ -21,7 +21,11 @@ public sealed class ValidationFinding
     /// </summary>
     public string? Layer { get; init; }
 
-    /// <summary>Line number in the source XML, when known.</summary>
+    /// <summary>
+    /// 1-based invoice line item number the finding relates to, or
+    /// <see langword="null"/> for document-level findings. Not repeated inside
+    /// <see cref="Message"/>: compose any "Line 2:" display prefix from this field.
+    /// </summary>
     public int? Line { get; init; }
 
     /// <summary>Human-readable explanation, friendly when the rule has a known mapping.</summary>

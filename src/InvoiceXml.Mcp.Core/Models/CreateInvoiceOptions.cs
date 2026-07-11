@@ -35,4 +35,11 @@ public sealed class CreateInvoiceOptions
         "'zugferd' only. When set, the API downloads it and embeds the generated XML into it instead of rendering " +
         "the built-in template; 'language' and 'brandColor' then have no effect. Max 20 MB.")]
     public string? PdfUrl { get; set; }
+
+    [Description(
+        "When true, the rendered PDF face gains an 'Electronic invoice details' section listing the technical " +
+        "properties that do not appear on a classic invoice layout: specification identifier (BT-24), business " +
+        "process type, payment mandate, preceding invoice references, and similar. Hybrid PDF formats ('facturx', " +
+        "'zugferd') with the built-in template only; has no effect when 'pdfUrl' supplies the visual layer.")]
+    public bool? IncludeAdvancedProperties { get; set; }
 }

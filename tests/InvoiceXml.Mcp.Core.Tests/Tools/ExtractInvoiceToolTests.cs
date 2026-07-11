@@ -37,7 +37,7 @@ public class ExtractInvoiceToolTests
 
         Assert.False(result.IsError ?? false);
         Assert.Equal(ExtractTarget.Json, client.LastExtractTarget);
-        Assert.Equal(SamplePdf, client.LastExtractPdf);
+        Assert.Equal(SamplePdf, client.LastExtractContent);
 
         // application/json is textual → inline as a second text block.
         Assert.Equal(2, result.Content.Count);
@@ -61,7 +61,7 @@ public class ExtractInvoiceToolTests
             ExtractTarget.Xml, CancellationToken.None, pdfUrl: "https://example.com/invoice.pdf");
 
         Assert.Equal("https://example.com/invoice.pdf", fetcher.LastUrl);
-        Assert.Equal(SamplePdf, client.LastExtractPdf);
+        Assert.Equal(SamplePdf, client.LastExtractContent);
     }
 
     [Fact]
@@ -90,7 +90,61 @@ public class ExtractInvoiceToolTests
         Assert.True(result.IsError);
         var block = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INPUT-INCOMPLETE-PDF", block.Text);
-        Assert.Null(client.LastExtractPdf); // API not called → no credit spent
+        Assert.Null(client.LastExtractContent); // API not called → no credit spent
+    }
+
+    [Fact]
+    public async Task AttachmentsTarget_XmlInput_ForwardsXmlContentType()
+    {
+        var zipArtifact = new DocumentArtifact
+        {
+            Content = [0x50, 0x4B, 0x03, 0x04], // "PK.."
+            ContentType = "application/zip",
+            FileName = "invoice-attachments.zip",
+        };
+        var client = new CapturingInvoiceXmlClient(artifact: zipArtifact);
+        var tool = Build(client);
+        const string invoiceXml = "<CrossIndustryInvoice/>";
+
+        var result = await tool.ExtractInvoiceAsync(
+            ExtractTarget.Attachments, CancellationToken.None, xml: invoiceXml);
+
+        Assert.False(result.IsError ?? false);
+        Assert.Equal(ExtractTarget.Attachments, client.LastExtractTarget);
+        Assert.Equal("application/xml", client.LastExtractContentType);
+        Assert.Equal(invoiceXml, Encoding.UTF8.GetString(client.LastExtractContent!));
+
+        // application/zip is binary → delivered as an embedded resource attachment.
+        Assert.Equal(2, result.Content.Count);
+        Assert.IsType<EmbeddedResourceBlock>(result.Content[1]);
+    }
+
+    [Fact]
+    public async Task AttachmentsTarget_PdfInput_StillForwardsPdfContentType()
+    {
+        var client = new CapturingInvoiceXmlClient();
+        var tool = Build(client);
+
+        await tool.ExtractInvoiceAsync(
+            ExtractTarget.Attachments, CancellationToken.None, pdfBase64: Convert.ToBase64String(SamplePdf));
+
+        Assert.Equal("application/pdf", client.LastExtractContentType);
+        Assert.Equal(SamplePdf, client.LastExtractContent);
+    }
+
+    [Fact]
+    public async Task XmlInputForJsonTarget_ReturnsSourceMismatch()
+    {
+        var client = new CapturingInvoiceXmlClient();
+        var tool = Build(client);
+
+        var result = await tool.ExtractInvoiceAsync(
+            ExtractTarget.Json, CancellationToken.None, xml: "<CrossIndustryInvoice/>");
+
+        Assert.True(result.IsError);
+        var block = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INPUT-SOURCE-MISMATCH", block.Text);
+        Assert.Null(client.LastExtractContent); // API not called → no credit spent
     }
 
     [Fact]

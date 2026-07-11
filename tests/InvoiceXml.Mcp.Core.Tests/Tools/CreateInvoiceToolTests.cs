@@ -175,12 +175,16 @@ public class CreateInvoiceToolTests
             PdfInvoiceFormat format, byte[] pdf, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
+        public Task<ValidationReportPdfResult> ValidationReportPdfAsync(
+            InvoiceFormat format, byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
         public Task<DocumentArtifact> RenderToPdfAsync(
             XmlInvoiceFormat format, string xml, PdfLanguage language, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<DocumentArtifact> ExtractAsync(
-            ExtractTarget target, byte[] pdf, CancellationToken cancellationToken = default)
+            ExtractTarget target, byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<DocumentArtifact> EmbedAsync(
@@ -211,12 +215,16 @@ public class CreateInvoiceToolTests
             PdfInvoiceFormat format, byte[] pdf, CancellationToken cancellationToken = default)
             => Task.FromException<ValidationResult>(ex);
 
+        public Task<ValidationReportPdfResult> ValidationReportPdfAsync(
+            InvoiceFormat format, byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
+            => Task.FromException<ValidationReportPdfResult>(ex);
+
         public Task<DocumentArtifact> RenderToPdfAsync(
             XmlInvoiceFormat format, string xml, PdfLanguage language, CancellationToken cancellationToken = default)
             => Task.FromException<DocumentArtifact>(ex);
 
         public Task<DocumentArtifact> ExtractAsync(
-            ExtractTarget target, byte[] pdf, CancellationToken cancellationToken = default)
+            ExtractTarget target, byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
             => Task.FromException<DocumentArtifact>(ex);
 
         public Task<DocumentArtifact> EmbedAsync(

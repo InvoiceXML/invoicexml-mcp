@@ -30,6 +30,8 @@ public sealed class ValidateXmlInvoiceTool
         "Pick the matching 'format': 'ubl' for UBL 2.1 / Peppol BIS 3.0, 'cii' for UN/CEFACT CII, " +
         "'xrechnung' for German XRechnung (CIUS-XR). " +
         "Use THIS tool for plain XML; for Factur-X / ZUGFeRD hybrid PDFs use 'validate_pdf_invoice'. " +
+        "UBL credit notes (a CreditNote root element, UNTDID type code 381) are accepted by 'ubl' and validated " +
+        "against the matching credit note rules. " +
         "\n\n" +
         "The conformance profile is detected automatically from the document's specification identifier (BT-24) " +
         "and the matching rule set is applied: for 'ubl' that covers Peppol BIS 3.0, plain EN 16931, XRechnung, " +

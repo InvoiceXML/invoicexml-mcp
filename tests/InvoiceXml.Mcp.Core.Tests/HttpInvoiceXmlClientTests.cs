@@ -94,6 +94,23 @@ public class HttpInvoiceXmlClientTests
     }
 
     [Fact]
+    public async Task CreateInvoiceAsync_SerializesIncludeAdvancedPropertiesOption()
+    {
+        var pdf = new byte[] { 0x25, 0x50, 0x44, 0x46 };
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, pdf, "application/pdf", "invoice-facturx.pdf"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        await client.CreateInvoiceAsync(
+            InvoiceFormat.FacturX,
+            new InvoiceDocument { InvoiceNumber = "9", Currency = "EUR" },
+            new CreateInvoiceOptions { IncludeAdvancedProperties = true },
+            CancellationToken.None);
+
+        Assert.Contains("\"includeAdvancedProperties\":true", handler.LastRequestBody);
+    }
+
+    [Fact]
     public async Task CreateInvoiceAsync_OmitsUnsetOptionsFromTheWire()
     {
         var responsePayload = "<Invoice xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:Invoice-2\" />"u8.ToArray();
@@ -190,11 +207,90 @@ public class HttpInvoiceXmlClientTests
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
         var result = await client.ExtractAsync(
-            ExtractTarget.Json, new byte[] { 0x25, 0x50, 0x44, 0x46 }, CancellationToken.None);
+            ExtractTarget.Json, new byte[] { 0x25, 0x50, 0x44, 0x46 }, "application/pdf", "invoice.pdf", CancellationToken.None);
 
         Assert.Equal("/v1/extract/json", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.StartsWith("multipart/form-data", handler.LastRequest.Content!.Headers.ContentType!.MediaType);
         Assert.Equal("application/json", result.ContentType);
+    }
+
+    [Fact]
+    public async Task ExtractAsync_AttachmentsTarget_PostsToAttachmentsRouteAndDefaultsZipName()
+    {
+        var zip = new byte[] { 0x50, 0x4B, 0x03, 0x04 }; // "PK.."
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, zip, "application/zip"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        var result = await client.ExtractAsync(
+            ExtractTarget.Attachments, new byte[] { 0x25, 0x50, 0x44, 0x46 }, "application/pdf", "invoice.pdf", CancellationToken.None);
+
+        Assert.Equal("/v1/extract/attachments", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Equal("application/zip", result.ContentType);
+        // No Content-Disposition on the stub, so the client's default applies.
+        Assert.Equal("invoice-attachments.zip", result.FileName);
+        Assert.Equal(zip, result.Content);
+    }
+
+    [Fact]
+    public async Task ExtractAsync_AttachmentsTarget_AcceptsXmlUpload()
+    {
+        var zip = new byte[] { 0x50, 0x4B, 0x03, 0x04 };
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, zip, "application/zip"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        await client.ExtractAsync(
+            ExtractTarget.Attachments,
+            System.Text.Encoding.UTF8.GetBytes("<CrossIndustryInvoice/>"),
+            "application/xml",
+            "invoice.xml",
+            CancellationToken.None);
+
+        Assert.Equal("/v1/extract/attachments", handler.LastRequest!.RequestUri!.AbsolutePath);
+        // The XML file part signals the API to take the plain-XML path.
+        Assert.Contains("application/xml", handler.LastRequestBody);
+        Assert.Contains("invoice.xml", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task ValidationReportPdfAsync_PostsToReportRouteAndReadsVerdictHeader()
+    {
+        var pdf = new byte[] { 0x25, 0x50, 0x44, 0x46 };
+        var response = StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, pdf, "application/pdf", "invoice-report.pdf");
+        response.Headers.Add("X-Invoice-Valid", "false");
+        var handler = new StubHttpMessageHandler(response);
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        var result = await client.ValidationReportPdfAsync(
+            InvoiceFormat.XRechnung,
+            System.Text.Encoding.UTF8.GetBytes("<Invoice/>"),
+            "application/xml",
+            "invoice.xml",
+            CancellationToken.None);
+
+        Assert.Equal("/v1/validate/xrechnung/report", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.StartsWith("multipart/form-data", handler.LastRequest.Content!.Headers.ContentType!.MediaType);
+        Assert.False(result.Valid);
+        Assert.Equal("invoice-report.pdf", result.Report.FileName);
+        Assert.Equal(pdf, result.Report.Content);
+    }
+
+    [Fact]
+    public async Task ValidationReportPdfAsync_MissingVerdictHeader_YieldsNullValid()
+    {
+        var pdf = new byte[] { 0x25, 0x50, 0x44, 0x46 };
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, pdf, "application/pdf"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        var result = await client.ValidationReportPdfAsync(
+            InvoiceFormat.FacturX, pdf, "application/pdf", "invoice.pdf", CancellationToken.None);
+
+        Assert.Equal("/v1/validate/facturx/report", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Null(result.Valid);
+        Assert.Equal("validation-report-facturx.pdf", result.Report.FileName);
     }
 
     [Fact]

@@ -38,7 +38,9 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     public PdfLanguage? LastRenderLanguage { get; private set; }
 
     public ExtractTarget? LastExtractTarget { get; private set; }
-    public byte[]? LastExtractPdf { get; private set; }
+    public byte[]? LastExtractContent { get; private set; }
+    public string? LastExtractContentType { get; private set; }
+    public string? LastExtractFileName { get; private set; }
 
     public PdfInvoiceFormat? LastEmbedFormat { get; private set; }
     public byte[]? LastEmbedPdf { get; private set; }
@@ -53,6 +55,11 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     public byte[]? LastTransformPdf { get; private set; }
     public PdfLanguage? LastTransformLanguage { get; private set; }
     public string? LastTransformBuyerReference { get; private set; }
+
+    public InvoiceFormat? LastReportFormat { get; private set; }
+    public byte[]? LastReportContent { get; private set; }
+    public string? LastReportContentType { get; private set; }
+    public bool? ReportVerdict { get; set; } = true;
 
     public Task<CreateInvoiceResult> CreateInvoiceAsync(
         InvoiceFormat format, InvoiceDocument invoice, CreateInvoiceOptions? options, CancellationToken cancellationToken = default)
@@ -74,6 +81,15 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
         return Task.FromResult(_result);
     }
 
+    public Task<ValidationReportPdfResult> ValidationReportPdfAsync(
+        InvoiceFormat format, byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
+    {
+        LastReportFormat = format;
+        LastReportContent = content;
+        LastReportContentType = contentType;
+        return Task.FromResult(new ValidationReportPdfResult { Report = _artifact, Valid = ReportVerdict });
+    }
+
     public Task<DocumentArtifact> RenderToPdfAsync(
         XmlInvoiceFormat format, string xml, PdfLanguage language, CancellationToken cancellationToken = default)
     {
@@ -84,10 +100,12 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<DocumentArtifact> ExtractAsync(
-        ExtractTarget target, byte[] pdf, CancellationToken cancellationToken = default)
+        ExtractTarget target, byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
     {
         LastExtractTarget = target;
-        LastExtractPdf = pdf;
+        LastExtractContent = content;
+        LastExtractContentType = contentType;
+        LastExtractFileName = fileName;
         return Task.FromResult(_artifact);
     }
 

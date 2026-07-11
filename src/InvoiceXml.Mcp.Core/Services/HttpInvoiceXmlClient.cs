@@ -100,6 +100,41 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
             "InvoiceXML API returned an empty validation response.");
     }
 
+    public async Task<ValidationReportPdfResult> ValidationReportPdfAsync(
+        InvoiceFormat format,
+        byte[] content,
+        string contentType,
+        string fileName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        if (content.Length == 0)
+            throw new ArgumentException("Content bytes must not be empty.", nameof(content));
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+
+        using var form = new MultipartFormDataContent();
+        form.Add(FilePart(content, contentType), "file", fileName);
+
+        var path = $"{ApiVersionPrefix}/validate/{Slug(format)}/report";
+        using var response = await _http.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+
+        var artifact = await ReadArtifactAsync(
+            response, $"validation-report-{Slug(format)}.pdf", cancellationToken).ConfigureAwait(false);
+
+        // The verdict rides in a response header so callers can branch on
+        // validity without parsing the PDF; absent or unreadable means unknown.
+        bool? valid = null;
+        if (response.Headers.TryGetValues("X-Invoice-Valid", out var values)
+            && bool.TryParse(values.FirstOrDefault(), out var parsed))
+        {
+            valid = parsed;
+        }
+
+        return new ValidationReportPdfResult { Report = artifact, Valid = valid };
+    }
+
     public Task<DocumentArtifact> RenderToPdfAsync(
         XmlInvoiceFormat format,
         string xml,
@@ -119,19 +154,28 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
 
     public Task<DocumentArtifact> ExtractAsync(
         ExtractTarget target,
-        byte[] pdf,
+        byte[] content,
+        string contentType,
+        string fileName,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(pdf);
-        if (pdf.Length == 0)
-            throw new ArgumentException("PDF bytes must not be empty.", nameof(pdf));
+        ArgumentNullException.ThrowIfNull(content);
+        if (content.Length == 0)
+            throw new ArgumentException("Content bytes must not be empty.", nameof(content));
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
 
         var form = new MultipartFormDataContent();
-        form.Add(FilePart(pdf, "application/pdf"), "file", "invoice.pdf");
+        form.Add(FilePart(content, contentType), "file", fileName);
 
         var slug = target.ToString().ToLowerInvariant();
         var path = $"{ApiVersionPrefix}/extract/{slug}";
-        var defaultName = target == ExtractTarget.Json ? "invoice.json" : "invoice.xml";
+        var defaultName = target switch
+        {
+            ExtractTarget.Json => "invoice.json",
+            ExtractTarget.Attachments => "invoice-attachments.zip",
+            _ => "invoice.xml",
+        };
         return SendForArtifactAsync(path, form, defaultName, cancellationToken);
     }
 

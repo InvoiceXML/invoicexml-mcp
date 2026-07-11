@@ -48,6 +48,11 @@ public sealed class CreateInvoiceTool
         "always matches the rules it was validated against. Format 'xrechnung' accepts options.version " +
         "('3.0', the version currently in force; omit for the effective default). " +
         "\n\n" +
+        "Credit notes are supported: set the document's typeCode to 'CreditNote' (UNTDID 381). For format 'ubl' " +
+        "this produces a proper UBL CreditNote document (CreditNote root element and CreditNoteLine items) and " +
+        "validates it against the matching credit note rules; the CII-based formats carry the type code in the " +
+        "same CrossIndustryInvoice structure. " +
+        "\n\n" +
         "On success the tool result contains a short summary plus the generated artefact. " +
         "XML formats include the XML text inline as a second text block (you may quote or explain it). " +
         "PDF formats deliver the file as an embedded resource attachment alongside the summary; " +
@@ -69,7 +74,8 @@ public sealed class CreateInvoiceTool
         [Description(
             "Optional creation settings: 'profile' (UBL CIUS selection, format 'ubl' only), " +
             "'version' (XRechnung spec version, format 'xrechnung' only), and the hybrid-PDF visual settings " +
-            "'language', 'brandColor' and 'pdfUrl' (formats 'facturx'/'zugferd' only). Every field is optional.")]
+            "'language', 'brandColor', 'pdfUrl' and 'includeAdvancedProperties' (formats 'facturx'/'zugferd' only). " +
+            "Every field is optional.")]
         CreateInvoiceOptions? options,
 
         CancellationToken cancellationToken)

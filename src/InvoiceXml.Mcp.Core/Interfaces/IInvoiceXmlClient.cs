@@ -44,6 +44,21 @@ public interface IInvoiceXmlClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Calls <c>POST /v1/validate/{format}/report</c> with the supplied invoice
+    /// uploaded as <c>multipart/form-data</c>. Runs the exact same validation
+    /// pipeline as the JSON endpoints but returns a printable PDF compliance
+    /// report; the verdict travels in the <c>X-Invoice-Valid</c> response header.
+    /// The content bytes are XML for plain-XML formats (ubl/cii/xrechnung) and a
+    /// hybrid PDF for Factur-X / ZUGFeRD.
+    /// </summary>
+    Task<ValidationReportPdfResult> ValidationReportPdfAsync(
+        InvoiceFormat format,
+        byte[] content,
+        string contentType,
+        string fileName,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Calls <c>POST /v1/render/{format}/to/pdf</c> with the supplied XML uploaded
     /// as <c>multipart/form-data</c>. Returns the rendered visual PDF preview.
     /// </summary>
@@ -54,13 +69,19 @@ public interface IInvoiceXmlClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Calls <c>POST /v1/extract/{target}</c> with the supplied PDF uploaded as
-    /// <c>multipart/form-data</c>. Returns either the structured invoice document
-    /// (JSON) or the embedded EN 16931 CII XML, per <paramref name="target"/>.
+    /// Calls <c>POST /v1/extract/{target}</c> with the supplied document uploaded
+    /// as <c>multipart/form-data</c>. Returns the structured invoice document
+    /// (JSON), the embedded EN 16931 CII XML, or the embedded supporting
+    /// documents as a ZIP archive, per <paramref name="target"/>. Targets
+    /// <c>json</c> and <c>xml</c> take a hybrid PDF; target <c>attachments</c>
+    /// also accepts a plain CII / UBL invoice XML (the API detects the type
+    /// from <paramref name="contentType"/> and <paramref name="fileName"/>).
     /// </summary>
     Task<DocumentArtifact> ExtractAsync(
         ExtractTarget target,
-        byte[] pdf,
+        byte[] content,
+        string contentType,
+        string fileName,
         CancellationToken cancellationToken = default);
 
     /// <summary>

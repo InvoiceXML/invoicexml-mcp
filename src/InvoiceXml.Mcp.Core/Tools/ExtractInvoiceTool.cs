@@ -8,9 +8,11 @@ using ModelContextProtocol.Server;
 namespace InvoiceXml.Mcp.Core.Tools;
 
 /// <summary>
-/// MCP tool that pulls content out of a hybrid PDF/A-3 e-invoice (Factur-X /
-/// ZUGFeRD) via <c>POST /v1/extract/{json|xml}</c>: either the structured invoice
-/// document as JSON, or the embedded EN 16931 CII XML.
+/// MCP tool that pulls content out of an e-invoice via
+/// <c>POST /v1/extract/{json|xml|attachments}</c>: the structured invoice
+/// document as JSON, the embedded EN 16931 CII XML, or the embedded supporting
+/// documents as a ZIP. The json/xml targets read a hybrid PDF/A-3 (Factur-X /
+/// ZUGFeRD); the attachments target also accepts a plain CII / UBL invoice XML.
 /// </summary>
 [McpServerToolType]
 public sealed class ExtractInvoiceTool
@@ -26,32 +28,47 @@ public sealed class ExtractInvoiceTool
 
     [McpServerTool(Name = "extract_invoice", Title = "Extract Invoice Data", ReadOnly = true, OpenWorld = true)]
     [Description(
-        "Extract content from a hybrid PDF/A-3 e-invoice (Factur-X or ZUGFeRD). " +
+        "Extract content from an e-invoice. " +
         "Choose 'target': 'json' for a structured invoice document (fields like seller, buyer, lines, totals), " +
-        "or 'xml' for the raw embedded EN 16931 CII XML. " +
-        "The PDF must contain an embedded XML attachment; if it doesn't, the result is an error. " +
+        "'xml' for the raw embedded EN 16931 CII XML, " +
+        "or 'attachments' for every embedded supporting document (BG-24 attachments with a BT-125 payload, e.g. " +
+        "timesheets or delivery notes) bundled as a ZIP archive. Documents referenced only by external URI " +
+        "(BT-124) are not downloaded, and an invoice with no embedded attachments returns an error saying so. " +
         "\n\n" +
-        "Provide the PDF via EXACTLY ONE of these inputs:\n" +
-        "• pdfUrl — a public https:// URL to the PDF; the server downloads it. PREFER THIS whenever a URL exists.\n" +
-        "• pdfBase64 — the PDF as base64. Only practical for small files; larger base64 gets corrupted in a tool call.\n" +
-        "If you set neither or both, the result is an input error explaining what to fix.\n" +
+        "Targets 'json' and 'xml' read a hybrid PDF/A-3 e-invoice (Factur-X or ZUGFeRD); the PDF must contain an " +
+        "embedded XML attachment, otherwise the result is an error. Target 'attachments' additionally accepts a " +
+        "plain CII or UBL invoice XML, since XML invoices can carry embedded attachments too. " +
+        "\n\n" +
+        "Provide the document via EXACTLY ONE of these inputs:\n" +
+        "• pdfUrl: a public https:// URL to the PDF; the server downloads it. PREFER THIS whenever a URL exists.\n" +
+        "• pdfBase64: the PDF as base64. Only practical for small files; larger base64 gets corrupted in a tool call.\n" +
+        "• xml: the invoice XML as text (target 'attachments' only).\n" +
+        "• xmlUrl: a public https:// URL to the XML (target 'attachments' only).\n" +
+        "If you set none or several, the result is an input error explaining what to fix.\n" +
         "\n" +
-        "Only use the ACTUAL bytes of the file. Never reconstruct, guess, or synthesize a PDF. " +
-        "If you cannot access the real file, ask the user for a public https:// URL (use pdfUrl) or to paste its base64.\n" +
+        "Only use the ACTUAL bytes/text of the file. Never reconstruct, guess, or synthesize a document. " +
+        "If you cannot access the real file, ask the user for a public https:// URL or to paste it.\n" +
         "\n" +
-        "On success the result is a short summary plus the extracted JSON or XML inline as text. " +
+        "On success the result is a short summary plus the extracted JSON or XML inline as text; target 'attachments' " +
+        "delivers the ZIP as an embedded resource attachment instead (refer to it by file name, do not read its bytes). " +
         "On failure the result has isError=true and a JSON body with { success:false, failureCategory, errors[], guidance }.")]
     public async Task<CallToolResult> ExtractInvoiceAsync(
-        [Description("What to extract: 'json' for a structured invoice document, 'xml' for the embedded CII XML.")]
+        [Description("What to extract: 'json' for a structured invoice document, 'xml' for the embedded CII XML, 'attachments' for the embedded supporting documents as a ZIP.")]
         ExtractTarget target,
 
         CancellationToken cancellationToken,
 
-        [Description("A public https:// URL to the PDF; the server fetches it. Provide exactly one of pdfUrl / pdfBase64.")]
+        [Description("A public https:// URL to the PDF; the server fetches it. Provide exactly one input.")]
         string? pdfUrl = null,
 
-        [Description("The PDF as base64 (small files only). Provide exactly one of pdfUrl / pdfBase64.")]
-        string? pdfBase64 = null)
+        [Description("The PDF as base64 (small files only). Provide exactly one input.")]
+        string? pdfBase64 = null,
+
+        [Description("For target 'attachments' only: the invoice XML (CII or UBL) as text. Provide exactly one input.")]
+        string? xml = null,
+
+        [Description("For target 'attachments' only: a public https:// URL to the invoice XML. Provide exactly one input.")]
+        string? xmlUrl = null)
     {
         var slug = target.ToString().ToLowerInvariant();
 
@@ -59,20 +76,70 @@ public sealed class ExtractInvoiceTool
         [
             ("pdfUrl", !string.IsNullOrWhiteSpace(pdfUrl)),
             ("pdfBase64", !string.IsNullOrWhiteSpace(pdfBase64)),
+            ("xml", !string.IsNullOrWhiteSpace(xml)),
+            ("xmlUrl", !string.IsNullOrWhiteSpace(xmlUrl)),
         ], slug);
         if (exclusive is not null)
             return exclusive;
 
-        var (bytes, inputError) = await ResolvePdfAsync(pdfUrl, pdfBase64, slug, cancellationToken).ConfigureAwait(false);
-        if (inputError is not null)
-            return inputError;
+        var providedXml = !string.IsNullOrWhiteSpace(xml) || !string.IsNullOrWhiteSpace(xmlUrl);
+        if (providedXml && target != ExtractTarget.Attachments)
+        {
+            return ArtifactTools.InputError("INPUT-SOURCE-MISMATCH",
+                $"Target '{slug}' extracts from a hybrid PDF; provide the document via pdfUrl or pdfBase64. " +
+                "XML input (xml / xmlUrl) is only accepted by target 'attachments'.",
+                ["xml", "xmlUrl"], slug);
+        }
+
+        byte[] content;
+        string contentType;
+        string fileName;
+
+        if (providedXml)
+        {
+            string xmlText;
+            if (!string.IsNullOrWhiteSpace(xml))
+            {
+                xmlText = xml;
+            }
+            else
+            {
+                var (fetched, error) = await ArtifactTools
+                    .FetchUrlAsync(_fetcher, xmlUrl!, "xmlUrl", slug, cancellationToken)
+                    .ConfigureAwait(false);
+                if (error is not null)
+                    return error;
+                xmlText = ArtifactTools.DecodeUtf8(fetched!);
+            }
+
+            content = System.Text.Encoding.UTF8.GetBytes(xmlText);
+            contentType = "application/xml";
+            fileName = "invoice.xml";
+        }
+        else
+        {
+            var (bytes, inputError) = await ResolvePdfAsync(pdfUrl, pdfBase64, slug, cancellationToken).ConfigureAwait(false);
+            if (inputError is not null)
+                return inputError;
+
+            content = bytes!;
+            contentType = "application/pdf";
+            fileName = "invoice.pdf";
+        }
 
         return await ArtifactTools.ExecuteAsync(
             slug,
-            () => _client.ExtractAsync(target, bytes!, cancellationToken),
-            artifact => target == ExtractTarget.Json
-                ? $"Extracted a structured invoice document (JSON, {artifact.Content.Length:N0} bytes) from the PDF. The document is included inline below."
-                : $"Extracted the embedded CII XML ({artifact.Content.Length:N0} bytes) from the PDF as {artifact.FileName}. The XML is included inline below.",
+            () => _client.ExtractAsync(target, content, contentType, fileName, cancellationToken),
+            artifact => target switch
+            {
+                ExtractTarget.Json =>
+                    $"Extracted a structured invoice document (JSON, {artifact.Content.Length:N0} bytes) from the PDF. The document is included inline below.",
+                ExtractTarget.Attachments =>
+                    $"Extracted the embedded supporting documents from the invoice as {artifact.FileName} ({artifact.Content.Length:N0} bytes). " +
+                    "The ZIP is delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes.",
+                _ =>
+                    $"Extracted the embedded CII XML ({artifact.Content.Length:N0} bytes) from the PDF as {artifact.FileName}. The XML is included inline below.",
+            },
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -109,7 +176,7 @@ public sealed class ExtractInvoiceTool
         if (PdfSniffer.IsIncompletePdf(bytes))
         {
             return (null, ArtifactTools.InputError("INPUT-INCOMPLETE-PDF",
-                $"Received {bytes.Length:N0} bytes that start like a PDF but have no %%EOF trailer — " +
+                $"Received {bytes.Length:N0} bytes that start like a PDF but have no %%EOF trailer: " +
                 "the file is truncated or was reconstructed. If you don't have the real file bytes, " +
                 "do not rebuild them: pass a public https:// URL via pdfUrl instead.",
                 ["pdfBase64", "pdfUrl"], slug));
