@@ -29,7 +29,8 @@ public sealed class ExtractInvoiceTool
     [McpServerTool(Name = "extract_invoice", Title = "Extract Invoice Data", ReadOnly = true, OpenWorld = true)]
     [Description(
         "Extract content from an e-invoice. " +
-        "Choose 'target': 'json' for a structured invoice document (fields like seller, buyer, lines, totals), " +
+        "Choose 'target': 'json' for a structured invoice document as an { \"invoice\": { ... } } envelope " +
+        "(fields like seller, buyer, lines, totals sit under the invoice key), " +
         "'xml' for the raw embedded EN 16931 CII XML, " +
         "or 'attachments' for every embedded supporting document (BG-24 attachments with a BT-125 payload, e.g. " +
         "timesheets or delivery notes) bundled as a ZIP archive. Documents referenced only by external URI " +
@@ -133,7 +134,8 @@ public sealed class ExtractInvoiceTool
             artifact => target switch
             {
                 ExtractTarget.Json =>
-                    $"Extracted a structured invoice document (JSON, {artifact.Content.Length:N0} bytes) from the PDF. The document is included inline below.",
+                    $"Extracted a structured invoice document (JSON, {artifact.Content.Length:N0} bytes) from the PDF. " +
+                    "The response is included inline below; the document fields sit under its 'invoice' key.",
                 ExtractTarget.Attachments =>
                     $"Extracted the embedded supporting documents from the invoice as {artifact.FileName} ({artifact.Content.Length:N0} bytes). " +
                     "The ZIP is delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes.",

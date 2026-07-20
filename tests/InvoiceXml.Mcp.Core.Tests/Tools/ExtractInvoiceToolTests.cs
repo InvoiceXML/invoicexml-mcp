@@ -25,7 +25,7 @@ public class ExtractInvoiceToolTests
     {
         var jsonArtifact = new DocumentArtifact
         {
-            Content = Encoding.UTF8.GetBytes("{\"invoiceNumber\":\"1\"}"),
+            Content = Encoding.UTF8.GetBytes("{\"invoice\":{\"invoiceNumber\":\"1\"}}"),
             ContentType = "application/json",
             FileName = "invoice.json",
         };

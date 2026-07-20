@@ -203,7 +203,7 @@ public class HttpInvoiceXmlClientTests
     public async Task ExtractAsync_PostsToTargetSlugRoute()
     {
         var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Json(
-            HttpStatusCode.OK, """{"invoiceNumber":"1"}"""));
+            HttpStatusCode.OK, """{"invoice":{"invoiceNumber":"1"}}"""));
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
         var result = await client.ExtractAsync(

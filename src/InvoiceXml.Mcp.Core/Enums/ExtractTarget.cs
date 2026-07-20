@@ -9,7 +9,10 @@ namespace InvoiceXml.Mcp.Core.Enums;
 [JsonConverter(typeof(JsonStringEnumConverter<ExtractTarget>))]
 public enum ExtractTarget
 {
-    /// <summary>Structured invoice document as JSON (<c>POST /v1/extract/json</c>).</summary>
+    /// <summary>
+    /// Structured invoice document as JSON (<c>POST /v1/extract/json</c>).
+    /// The response is an envelope with the document under an <c>invoice</c> key.
+    /// </summary>
     [JsonStringEnumMemberName("json")]
     Json,
 
