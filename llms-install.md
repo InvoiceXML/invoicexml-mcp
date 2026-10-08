@@ -36,7 +36,8 @@ does not paste any API key.
    No secret needs to be stored in the config.
 5. Verify the connection by listing the server's tools. You should see:
    `create_invoice`, `validate_xml_invoice`, `validate_pdf_invoice`,
-   `render_invoice`, `extract_invoice`, `embed_invoice`, `convert_invoice`.
+   `render_validation_report`, `render_invoice`, `extract_invoice`, `embed_invoice`,
+   `convert_invoice`, `create_order`, `validate_order`, `get_account`.
 
 The user can create a free account with starter credits at
 `https://www.invoicexml.com/account/signup`.

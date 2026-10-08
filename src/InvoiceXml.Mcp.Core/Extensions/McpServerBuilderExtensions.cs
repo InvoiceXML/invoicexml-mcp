@@ -29,6 +29,17 @@ public static class McpServerBuilderExtensions
         "Validate\n" +
         "• Validate XML Invoice (validate_xml_invoice): check a UBL / CII / XRechnung XML document.\n" +
         "• Validate PDF Invoice (validate_pdf_invoice): check a Factur-X / ZUGFeRD hybrid PDF.\n" +
+        "• Render Validation Report PDF (render_validation_report): the same check, delivered as a printable " +
+        "PDF compliance report.\n" +
+        "French e-invoicing rules (BR-FR): Factur-X invoices almost always go over the French e-invoicing network " +
+        "(a PDP / Plateforme Agréée), so pass rules ['br-fr'] by default on every Factur-X create, validate, embed " +
+        "and report call, and leave it out only when the user explicitly says the invoice will not be sent over " +
+        "that network. For a French domestic UBL or CII invoice, ask the user and pass it if they say yes.\n" +
+        "\n" +
+        "Purchase orders (Order-X)\n" +
+        "• Create Purchase Order (create_order): generate an Order-X hybrid PDF or a plain Cross-Industry Order XML " +
+        "from the same document model as create_invoice.\n" +
+        "• Validate Purchase Order (validate_order): check an Order-X PDF or Cross-Industry Order XML.\n" +
         "\n" +
         "Render\n" +
         "• Render Invoice to PDF (render_invoice): turn a UBL / CII / XRechnung XML into a human-readable " +
@@ -42,6 +53,9 @@ public static class McpServerBuilderExtensions
         "Convert\n" +
         "• Convert Invoice Format (convert_invoice): deterministic syntax conversion between formats " +
         "(e.g. ubl<->cii, xrechnung->ubl, ubl->facturx, facturx->cii).\n" +
+        "\n" +
+        "Account\n" +
+        "• Check Account and Credits (get_account): plan and remaining credits. Free to call.\n" +
         "\n" +
         "Working with files: prefer passing a public https:// URL (pdfUrl / xmlUrl) and let the server " +
         "fetch the file. Only ever use the real bytes or text of a document. Never reconstruct, guess, or " +
@@ -64,7 +78,7 @@ public static class McpServerBuilderExtensions
     /// <c>AddMcpServer()</c>.
     /// </summary>
     /// <remarks>
-    /// Scoped to the Core assembly so adding a new tool is one file change — no
+    /// Scoped to the Core assembly so adding a new tool is one file change: no
     /// host edits, no DI manifest. This is the OCP seam for the tool layer.
     /// </remarks>
     public static IMcpServerBuilder WithInvoiceXmlTools(this IMcpServerBuilder builder)

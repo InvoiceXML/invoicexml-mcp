@@ -26,21 +26,55 @@ public interface IInvoiceXmlClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Calls <c>POST /v1/create/cio</c> (plain Cross-Industry Order XML) or
+    /// <c>POST /v1/create/order-x</c> (hybrid PDF/A-3) with the supplied order.
+    /// Orders reuse the invoice document model, sent under an <c>order</c> key.
+    /// </summary>
+    Task<DocumentArtifact> CreateOrderAsync(
+        OrderFormat format,
+        InvoiceDocument order,
+        CreateOrderOptions? options,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Calls <c>POST /v1/validate/order-x</c> with the supplied document uploaded
+    /// as <c>multipart/form-data</c>: a hybrid Order-X PDF or the raw CIO XML,
+    /// told apart by <paramref name="contentType"/>. Returns the parsed validation result.
+    /// </summary>
+    Task<ValidationResult> ValidateOrderAsync(
+        byte[] content,
+        string contentType,
+        string fileName,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Calls <c>GET /v1/me</c>: the caller's plan and credit balance. The API does
+    /// not charge a credit for this call.
+    /// </summary>
+    Task<AccountInfo> GetAccountAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Calls <c>POST /v1/validate/{format}</c> with the supplied XML uploaded as
     /// <c>multipart/form-data</c>. Returns the parsed validation result.
+    /// <paramref name="rules"/> adds extra national rule sets (one <c>rules</c>
+    /// form part each); the API accepts them on <c>ubl</c> and <c>cii</c>.
     /// </summary>
     Task<ValidationResult> ValidateXmlAsync(
         XmlInvoiceFormat format,
         string xml,
+        IReadOnlyList<ExtraRuleset>? rules,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Calls <c>POST /v1/validate/{format}</c> with the supplied PDF uploaded as
     /// <c>multipart/form-data</c>. Returns the parsed validation result.
+    /// <paramref name="rules"/> adds extra national rule sets; the API accepts
+    /// them on <c>facturx</c> only.
     /// </summary>
     Task<ValidationResult> ValidatePdfAsync(
         PdfInvoiceFormat format,
         byte[] pdf,
+        IReadOnlyList<ExtraRuleset>? rules,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -48,24 +82,33 @@ public interface IInvoiceXmlClient
     /// uploaded as <c>multipart/form-data</c>. Runs the exact same validation
     /// pipeline as the JSON endpoints but returns a printable PDF compliance
     /// report; the verdict travels in the <c>X-Invoice-Valid</c> response header.
-    /// The content bytes are XML for plain-XML formats (ubl/cii/xrechnung) and a
-    /// hybrid PDF for Factur-X / ZUGFeRD.
+    /// The content bytes are XML for plain-XML formats (ubl/cii/xrechnung), a
+    /// hybrid PDF for Factur-X / ZUGFeRD, and either for Order-X (the API takes
+    /// a hybrid Order-X PDF or the raw CIO XML on one route). <paramref name="rules"/> adds extra
+    /// national rule sets (ubl / cii / facturx); <paramref name="footerBrand"/>
+    /// sets the report's footer credit, omitted when null.
     /// </summary>
     Task<ValidationReportPdfResult> ValidationReportPdfAsync(
-        InvoiceFormat format,
+        ValidationReportFormat format,
         byte[] content,
         string contentType,
         string fileName,
+        IReadOnlyList<ExtraRuleset>? rules,
+        FooterBrand? footerBrand,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Calls <c>POST /v1/render/{format}/to/pdf</c> with the supplied XML uploaded
     /// as <c>multipart/form-data</c>. Returns the rendered visual PDF preview.
+    /// <paramref name="logoUrl"/> is fetched by the API, not by this client;
+    /// <paramref name="footerBrand"/> is omitted when null.
     /// </summary>
     Task<DocumentArtifact> RenderToPdfAsync(
         XmlInvoiceFormat format,
         string xml,
         PdfLanguage language,
+        string? logoUrl,
+        FooterBrand? footerBrand,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -87,19 +130,22 @@ public interface IInvoiceXmlClient
     /// <summary>
     /// Calls <c>POST /v1/embed/{format}</c> with the supplied PDF and CII XML
     /// uploaded as <c>multipart/form-data</c>. Returns a hybrid PDF/A-3 with the
-    /// XML embedded (Factur-X or ZUGFeRD).
+    /// XML embedded (Factur-X or ZUGFeRD). <paramref name="rules"/> adds extra
+    /// national rule sets to the pre-embed validation (facturx only).
     /// </summary>
     Task<DocumentArtifact> EmbedAsync(
         PdfInvoiceFormat format,
         byte[] pdf,
         string ciiXml,
+        IReadOnlyList<ExtraRuleset>? rules,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Calls <c>POST /v1/convert/{source}/to/{target}</c> with the supplied document
     /// uploaded as <c>multipart/form-data</c>. The source bytes are XML for plain-XML
     /// sources and a hybrid PDF for Factur-X / ZUGFeRD sources; the result is XML or
-    /// a hybrid PDF depending on <paramref name="target"/>.
+    /// a hybrid PDF depending on <paramref name="target"/>. <paramref name="footerBrand"/>
+    /// only travels on hybrid-PDF targets, where the API renders a PDF face.
     /// </summary>
     Task<DocumentArtifact> ConvertAsync(
         InvoiceFormat source,
@@ -107,6 +153,7 @@ public interface IInvoiceXmlClient
         byte[] content,
         string contentType,
         string fileName,
+        FooterBrand? footerBrand,
         CancellationToken cancellationToken = default);
 
     /// <summary>

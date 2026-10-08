@@ -36,13 +36,18 @@ public sealed class RenderValidationReportTool
         "when you need the machine-readable JSON verdict to reason over, and THIS tool when the user wants a " +
         "report document to save, share, or archive. " +
         "Set 'format' to match the document: 'ubl', 'cii', 'xrechnung' for plain XML; 'facturx', 'zugferd' for " +
-        "hybrid PDFs. " +
+        "hybrid PDFs; 'order-x' for an Order-X purchase order (hybrid PDF or plain Cross-Industry Order XML). " +
         "\n\n" +
         "Provide the document by its type:\n" +
         "• If format is ubl / cii / xrechnung (an XML format): use xml (text) or xmlUrl.\n" +
         "• If format is facturx / zugferd (a hybrid PDF): use pdfBase64 or pdfUrl (prefer pdfUrl).\n" +
+        "• If format is order-x: any one of the four inputs, matching what the file is.\n" +
         "Provide EXACTLY ONE input, and it must match the format type. Mismatches and missing/duplicate inputs " +
         "return an input error explaining what to fix.\n" +
+        "\n" +
+        "Optional: rules ['br-fr'] adds the French e-invoicing rules (formats 'ubl', 'cii', 'facturx'), and " +
+        "footerBrand 'none' removes the InvoiceXML credit from the report footer. " +
+        ExtraRules.FacturXDefaultGuidance + " For 'cii' and 'ubl': " + ExtraRules.AskForFrenchNetworkGuidance + "\n" +
         "\n" +
         "Only use the ACTUAL bytes/text of the file. Never reconstruct, guess, or synthesize content. " +
         "If you cannot access the real file, ask the user for a public https:// URL or to paste it.\n" +
@@ -53,25 +58,37 @@ public sealed class RenderValidationReportTool
         "(missing file, malformed XML, auth) return isError=true with a JSON body " +
         "{ success:false, failureCategory, errors[], guidance }.")]
     public async Task<CallToolResult> RenderValidationReportAsync(
-        [Description("Validation endpoint matching the document. One of: ubl, cii, xrechnung (XML), facturx, zugferd (hybrid PDF).")]
-        InvoiceFormat format,
+        [Description("Validation endpoint matching the document. One of: ubl, cii, xrechnung (XML), facturx, zugferd (hybrid PDF), order-x (Order-X PDF or Cross-Industry Order XML).")]
+        ValidationReportFormat format,
 
         CancellationToken cancellationToken,
 
-        [Description("For an XML format (ubl/cii/xrechnung): the invoice XML as text.")]
+        [Description("For an XML document (ubl/cii/xrechnung, or an order-x CIO XML): the XML as text.")]
         string? xml = null,
 
-        [Description("For an XML format (ubl/cii/xrechnung): a public https:// URL to the XML.")]
+        [Description("For an XML document (ubl/cii/xrechnung, or an order-x CIO XML): a public https:// URL to the XML.")]
         string? xmlUrl = null,
 
-        [Description("For a hybrid-PDF format (facturx/zugferd): the PDF as base64 (small files only).")]
+        [Description("For a hybrid PDF (facturx/zugferd, or an order-x PDF): the PDF as base64 (small files only).")]
         string? pdfBase64 = null,
 
-        [Description("For a hybrid-PDF format (facturx/zugferd): a public https:// URL to the PDF.")]
-        string? pdfUrl = null)
+        [Description("For a hybrid PDF (facturx/zugferd, or an order-x PDF): a public https:// URL to the PDF.")]
+        string? pdfUrl = null,
+
+        [Description(ExtraRules.ParameterDescription + " Formats 'ubl', 'cii' and 'facturx' only.")]
+        List<ExtraRuleset>? rules = null,
+
+        [Description("Footer credit of the report PDF: 'invoicexml' (default) or 'none' to omit it.")]
+        FooterBrand? footerBrand = null)
     {
-        var slug = format.ToString().ToLowerInvariant();
-        var xmlFormat = format is InvoiceFormat.Ubl or InvoiceFormat.Cii or InvoiceFormat.XRechnung;
+        var slug = EnumWire.Slug(format);
+        // Order-X is the one route that takes both shapes: a hybrid PDF or the raw CIO XML.
+        var acceptsPdf = format is not (ValidationReportFormat.Ubl or ValidationReportFormat.Cii or ValidationReportFormat.XRechnung);
+        var acceptsXml = format is not (ValidationReportFormat.FacturX or ValidationReportFormat.Zugferd);
+
+        var rulesError = ExtraRules.Unsupported(rules, slug, "ubl", "cii", "facturx");
+        if (rulesError is not null)
+            return ArtifactTools.InputError("INPUT-RULES", rulesError, ["rules"], slug);
 
         var exclusive = ArtifactTools.ValidateExactlyOne(
         [
@@ -86,13 +103,13 @@ public sealed class RenderValidationReportTool
         var providedXml = !string.IsNullOrWhiteSpace(xml) || !string.IsNullOrWhiteSpace(xmlUrl);
         var providedPdf = !string.IsNullOrWhiteSpace(pdfBase64) || !string.IsNullOrWhiteSpace(pdfUrl);
 
-        if (xmlFormat && providedPdf)
+        if (!acceptsPdf && providedPdf)
         {
             return ArtifactTools.InputError("INPUT-SOURCE-MISMATCH",
                 $"Format '{slug}' is an XML format; provide the document via xml or xmlUrl, not a PDF input.",
                 ["xml", "xmlUrl"], slug);
         }
-        if (!xmlFormat && providedXml)
+        if (!acceptsXml && providedXml)
         {
             return ArtifactTools.InputError("INPUT-SOURCE-MISMATCH",
                 $"Format '{slug}' is a hybrid PDF; provide the document via pdfBase64 or pdfUrl, not an XML input.",
@@ -103,7 +120,7 @@ public sealed class RenderValidationReportTool
         string contentType;
         string fileName;
 
-        if (xmlFormat)
+        if (providedXml)
         {
             string xmlText;
             if (!string.IsNullOrWhiteSpace(xml))
@@ -122,7 +139,7 @@ public sealed class RenderValidationReportTool
 
             content = System.Text.Encoding.UTF8.GetBytes(xmlText);
             contentType = "application/xml";
-            fileName = "invoice.xml";
+            fileName = format is ValidationReportFormat.OrderX ? "order.xml" : "invoice.xml";
         }
         else
         {
@@ -162,7 +179,7 @@ public sealed class RenderValidationReportTool
 
             content = pdfBytes;
             contentType = "application/pdf";
-            fileName = "invoice.pdf";
+            fileName = format is ValidationReportFormat.OrderX ? "order.pdf" : "invoice.pdf";
         }
 
         // The verdict rides on the client result, not the artifact, so capture it
@@ -174,7 +191,7 @@ public sealed class RenderValidationReportTool
             async () =>
             {
                 outcome = await _client
-                    .ValidationReportPdfAsync(format, content, contentType, fileName, cancellationToken)
+                    .ValidationReportPdfAsync(format, content, contentType, fileName, rules, footerBrand, cancellationToken)
                     .ConfigureAwait(false);
                 return outcome.Report;
             },

@@ -104,7 +104,7 @@ public class ValidatePdfInvoiceToolTests
     [Fact]
     public async Task IncompletePdf_RejectedBeforeApiCall()
     {
-        // %PDF header but no %%EOF — the fabricated/truncated case from the ChatGPT bug.
+        // %PDF header but no %%EOF: the fabricated/truncated case from the ChatGPT bug.
         var incomplete = Encoding.ASCII.GetBytes("%PDF-1.7\n1 0 obj <<>> endobj");
         var client = new CapturingInvoiceXmlClient();
         var tool = Build(client);
@@ -155,20 +155,31 @@ public class ValidatePdfInvoiceToolTests
             InvoiceFormat format, Models.InvoiceDocument invoice, Models.CreateInvoiceOptions? options, CancellationToken ct = default)
             => throw new NotImplementedException();
 
+        public Task<Models.DocumentArtifact> CreateOrderAsync(
+            OrderFormat format, Models.InvoiceDocument order, Models.CreateOrderOptions? options, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public Task<Models.ValidationResult> ValidateOrderAsync(
+            byte[] content, string contentType, string fileName, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public Task<Models.AccountInfo> GetAccountAsync(CancellationToken ct = default)
+            => throw new NotImplementedException();
+
         public Task<Models.ValidationResult> ValidateXmlAsync(
-            XmlInvoiceFormat format, string xml, CancellationToken ct = default)
+            XmlInvoiceFormat format, string xml, IReadOnlyList<ExtraRuleset>? rules, CancellationToken ct = default)
             => Task.FromException<Models.ValidationResult>(ex);
 
         public Task<Models.ValidationResult> ValidatePdfAsync(
-            PdfInvoiceFormat format, byte[] pdf, CancellationToken ct = default)
+            PdfInvoiceFormat format, byte[] pdf, IReadOnlyList<ExtraRuleset>? rules, CancellationToken ct = default)
             => Task.FromException<Models.ValidationResult>(ex);
 
         public Task<Models.ValidationReportPdfResult> ValidationReportPdfAsync(
-            InvoiceFormat format, byte[] content, string contentType, string fileName, CancellationToken ct = default)
+            ValidationReportFormat format, byte[] content, string contentType, string fileName, IReadOnlyList<ExtraRuleset>? rules, FooterBrand? footerBrand, CancellationToken ct = default)
             => Task.FromException<Models.ValidationReportPdfResult>(ex);
 
         public Task<Models.DocumentArtifact> RenderToPdfAsync(
-            XmlInvoiceFormat format, string xml, PdfLanguage language, CancellationToken ct = default)
+            XmlInvoiceFormat format, string xml, PdfLanguage language, string? logoUrl, FooterBrand? footerBrand, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public Task<Models.DocumentArtifact> ExtractAsync(
@@ -176,11 +187,11 @@ public class ValidatePdfInvoiceToolTests
             => throw new NotImplementedException();
 
         public Task<Models.DocumentArtifact> EmbedAsync(
-            PdfInvoiceFormat format, byte[] pdf, string ciiXml, CancellationToken ct = default)
+            PdfInvoiceFormat format, byte[] pdf, string ciiXml, IReadOnlyList<ExtraRuleset>? rules, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public Task<Models.DocumentArtifact> ConvertAsync(
-            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, CancellationToken ct = default)
+            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public Task<Models.DocumentArtifact> TransformAsync(

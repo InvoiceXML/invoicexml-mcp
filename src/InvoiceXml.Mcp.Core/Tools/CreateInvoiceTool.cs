@@ -45,13 +45,22 @@ public sealed class CreateInvoiceTool
         "so buyer and seller electronic addresses are effectively required); set options.profile to target another " +
         "CIUS instead: 'en16931' (plain EN 16931, no Peppol requirements), 'nlcius' (Netherlands), 'ehf' (Norway), " +
         "'xrechnung' (German B2G in UBL syntax), or 'pint' (Peppol International). The output's CustomizationID " +
-        "always matches the rules it was validated against. Format 'xrechnung' accepts options.version " +
-        "('3.0', the version currently in force; omit for the effective default). " +
+        "always matches the rules it was validated against. " +
+        "Format 'xrechnung' always targets the version currently in force; options.syntax picks the XML syntax, " +
+        "'ubl' (default, what most German receivers expect) or 'cii'. It additionally requires " +
+        "buyerReference (the Leitweg-ID), seller.contact (name, phone and email), seller and buyer " +
+        "electronicAddress, and paymentDetails. " +
+        "options.rules ['br-fr'] also checks the French e-invoicing rules (formats 'facturx', 'cii', 'ubl'). " +
+        ExtraRules.FacturXDefaultGuidance + " For 'cii' and 'ubl': " + ExtraRules.AskForFrenchNetworkGuidance + " " +
         "\n\n" +
-        "Credit notes are supported: set the document's typeCode to 'CreditNote' (UNTDID 381). For format 'ubl' " +
+        "Credit notes are supported: set the document's typeCode to 'CreditNote' (UNTDID 381) and cite the " +
+        "credited invoice in precedingInvoiceReferences. For format 'ubl' " +
         "this produces a proper UBL CreditNote document (CreditNote root element and CreditNoteLine items) and " +
         "validates it against the matching credit note rules; the CII-based formats carry the type code in the " +
         "same CrossIndustryInvoice structure. " +
+        "\n\n" +
+        "Fill paymentDetails (IBAN, payment means) whenever the buyer is expected to pay, and use notes, delivery, " +
+        "invoicingPeriod, allowances and charges when the source invoice has them. " +
         "\n\n" +
         "On success the tool result contains a short summary plus the generated artefact. " +
         "XML formats include the XML text inline as a second text block (you may quote or explain it). " +
@@ -72,15 +81,23 @@ public sealed class CreateInvoiceTool
         InvoiceDocument invoice,
 
         [Description(
-            "Optional creation settings: 'profile' (UBL CIUS selection, format 'ubl' only), " +
-            "'version' (XRechnung spec version, format 'xrechnung' only), and the hybrid-PDF visual settings " +
-            "'language', 'brandColor', 'pdfUrl' and 'includeAdvancedProperties' (formats 'facturx'/'zugferd' only). " +
-            "Every field is optional.")]
+            "Optional creation settings: 'language' (every format), 'profile' (UBL CIUS selection, format 'ubl' only), " +
+            "'syntax' (XML syntax 'ubl' or 'cii', format 'xrechnung' only), " +
+            "'rules' (extra national rules such as 'br-fr', formats 'facturx'/'cii'/'ubl'), and the hybrid-PDF " +
+            "visual settings 'brandColor', 'logoUrl', 'pdfUrl', 'includeAdvancedProperties' and 'footerBrand' " +
+            "(formats 'facturx'/'zugferd' only). Every field is optional.")]
         CreateInvoiceOptions? options,
 
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(invoice);
+
+        // The create routes bill even a 400, so an unsupported rule set is refused
+        // here rather than spending a credit on the API's own refusal.
+        var slug = format.ToString().ToLowerInvariant();
+        var rulesError = ExtraRules.Unsupported(options?.Rules, slug, "ubl", "cii", "facturx");
+        if (rulesError is not null)
+            return ArtifactTools.InputError("INPUT-RULES", rulesError, ["options.rules"], slug);
 
         try
         {

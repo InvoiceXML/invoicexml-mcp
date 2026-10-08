@@ -34,13 +34,22 @@ public sealed class DocumentTotals
     [Description("Invoice total VAT amount (BT-110). Optional at the C# level; required when VAT applies.")]
     public decimal? TaxTotalAmount { get; set; }
 
+    [Description("Invoice total VAT amount in the VAT accounting currency (BT-111). Only when taxCurrency (BT-6) is set.")]
+    public decimal? TaxTotalAmountInAccountingCurrency { get; set; }
+
     [Description("Invoice total amount with VAT (BT-112). Mandatory under EN 16931.")]
     public decimal? GrandTotalAmount { get; set; }
 
-    [Description("Amount due for payment (BT-115). Mandatory under EN 16931.")]
+    [Description("Amount already paid, e.g. a deposit or a receipt paid at the till (BT-113). Optional.")]
+    public decimal? PaidAmount { get; set; }
+
+    [Description("Rounding amount added to the total (BT-114). Optional.")]
+    public decimal? RoundingAmount { get; set; }
+
+    [Description("Amount due for payment (BT-115) = grandTotalAmount - paidAmount + roundingAmount. Mandatory under EN 16931.")]
     public decimal? DuePayableAmount { get; set; }
 
-    /// <summary>Additional total fields (TaxTotalAmountInAccountingCurrency, PaidAmount, RoundingAmount, ...) flow through.</summary>
+    /// <summary>Total fields not modelled above flow through to the API unchanged.</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Additional { get; set; }
 }

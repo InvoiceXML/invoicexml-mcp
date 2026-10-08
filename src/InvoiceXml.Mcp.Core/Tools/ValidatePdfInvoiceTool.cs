@@ -37,6 +37,9 @@ public sealed class ValidatePdfInvoiceTool
         "corrupted when written into a tool call, so use a URL instead.\n" +
         "If you set neither or both, the result is valid=false with an INPUT-… error explaining what to fix.\n" +
         "\n" +
+        "rules ['br-fr'] also checks the French e-invoicing rules (format 'facturx' only). " +
+        ExtraRules.FacturXDefaultGuidance + "\n" +
+        "\n" +
         "Only use the ACTUAL bytes of the file. Never reconstruct, guess, or synthesize a PDF. " +
         "If you cannot access the real file (e.g. a user uploaded it and you can't read its bytes), do NOT call " +
         "this tool with made-up content; ask the user for a public https:// URL (use pdfUrl) or to paste the file's base64.\n" +
@@ -63,8 +66,15 @@ public sealed class ValidatePdfInvoiceTool
         string? pdfUrl = null,
 
         [Description("The PDF as base64 (small files only). Provide exactly one of pdfUrl / pdfBase64.")]
-        string? pdfBase64 = null)
+        string? pdfBase64 = null,
+
+        [Description(ExtraRules.ParameterDescription + " Format 'facturx' only.")]
+        List<ExtraRuleset>? rules = null)
     {
+        var rulesError = ExtraRules.Unsupported(rules, format.ToString().ToLowerInvariant(), "facturx");
+        if (rulesError is not null)
+            return FileInputResolver.InputError("INPUT-RULES", rulesError, ["rules"]);
+
         var exclusive = FileInputResolver.ValidateExactlyOne(
         [
             ("pdfUrl", !string.IsNullOrWhiteSpace(pdfUrl)),
@@ -113,7 +123,7 @@ public sealed class ValidatePdfInvoiceTool
 
         try
         {
-            return await _client.ValidatePdfAsync(format, bytes, cancellationToken).ConfigureAwait(false);
+            return await _client.ValidatePdfAsync(format, bytes, rules, cancellationToken).ConfigureAwait(false);
         }
         catch (InvoiceXmlApiException ex)
         {

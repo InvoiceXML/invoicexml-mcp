@@ -18,7 +18,25 @@ public sealed class ItemInformation
     [Description("Longer description of the item (BT-154). Optional.")]
     public string? Description { get; set; }
 
-    /// <summary>Additional item fields (SellerIdentifier, BuyerIdentifier, StandardIdentifier, Classifications, CountryOfOrigin) flow through.</summary>
+    [Description("Seller's article number for the item (BT-155). Optional.")]
+    public string? SellerIdentifier { get; set; }
+
+    [Description("Buyer's article number for the item (BT-156). Optional.")]
+    public string? BuyerIdentifier { get; set; }
+
+    [Description("Standard item identifier (BT-157), e.g. a GTIN with ISO 6523 scheme '0160' (BT-157-1).")]
+    public SchemeIdentifier? StandardIdentifier { get; set; }
+
+    [Description("Item classifications (BT-158), e.g. CPV or UNSPSC codes. Optional.")]
+    public List<ItemClassification>? Classifications { get; set; }
+
+    [Description("Item attributes (BG-32): name / value pairs such as colour or serial number. Optional.")]
+    public List<ItemProperty>? Attributes { get; set; }
+
+    [Description("ISO 3166-1 alpha-2 country of origin of the item (BT-159). Optional.")]
+    public string? CountryOfOrigin { get; set; }
+
+    /// <summary>Item fields not modelled above flow through to the API unchanged.</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Additional { get; set; }
 }

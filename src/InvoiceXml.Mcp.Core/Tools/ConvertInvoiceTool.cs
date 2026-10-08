@@ -11,7 +11,7 @@ namespace InvoiceXml.Mcp.Core.Tools;
 /// MCP tool for deterministic format conversions across the EN 16931 family via
 /// <c>POST /v1/convert/{source}/to/{target}</c>. Plain-XML sources (UBL / CII /
 /// XRechnung) take XML input; hybrid-PDF sources (Factur-X / ZUGFeRD) take a PDF
-/// whose embedded XML is transcoded. No AI is involved — every route is a known
+/// whose embedded XML is transcoded. No AI is involved: every route is a known
 /// transform. Only the 16 conversions the API actually exposes are accepted; the
 /// tool rejects unsupported pairs client-side before spending an API credit.
 /// </summary>
@@ -67,6 +67,9 @@ public sealed class ConvertInvoiceTool
         "Provide EXACTLY ONE input, and it must match the source type. Mismatches and missing/duplicate inputs " +
         "return an input error explaining what to fix.\n" +
         "\n" +
+        "When the target is facturx / zugferd and the source is XML, the server renders a PDF face; " +
+        "footerBrand 'none' removes the InvoiceXML credit from its footer.\n" +
+        "\n" +
         "Only use the ACTUAL bytes/text of the file. Never reconstruct, guess, or synthesize content. " +
         "If you cannot access the real file, ask the user for a public https:// URL or to paste it.\n" +
         "\n" +
@@ -92,7 +95,12 @@ public sealed class ConvertInvoiceTool
         string? pdfBase64 = null,
 
         [Description("For a hybrid-PDF source (facturx/zugferd): a public https:// URL to the PDF.")]
-        string? pdfUrl = null)
+        string? pdfUrl = null,
+
+        [Description(
+            "Footer credit of the rendered PDF face: 'invoicexml' (default) or 'none' to omit it. Only used when an " +
+            "XML source is converted to facturx / zugferd; ignored for every other conversion.")]
+        FooterBrand? footerBrand = null)
     {
         var sourceSlug = sourceFormat.ToString().ToLowerInvariant();
         var targetSlug = targetFormat.ToString().ToLowerInvariant();
@@ -190,7 +198,7 @@ public sealed class ConvertInvoiceTool
             if (PdfSniffer.IsIncompletePdf(pdfBytes))
             {
                 return ArtifactTools.InputError("INPUT-INCOMPLETE-PDF",
-                    $"Received {pdfBytes.Length:N0} bytes that start like a PDF but have no %%EOF trailer — " +
+                    $"Received {pdfBytes.Length:N0} bytes that start like a PDF but have no %%EOF trailer; " +
                     "the file is truncated or was reconstructed. If you don't have the real file bytes, " +
                     "do not rebuild them: pass a public https:// URL via pdfUrl instead.",
                     ["pdfBase64", "pdfUrl"], slug);
@@ -205,7 +213,7 @@ public sealed class ConvertInvoiceTool
 
         return await ArtifactTools.ExecuteAsync(
             slug,
-            () => _client.ConvertAsync(sourceFormat, targetFormat, content, contentType, fileName, cancellationToken),
+            () => _client.ConvertAsync(sourceFormat, targetFormat, content, contentType, fileName, footerBrand, cancellationToken),
             artifact => targetIsPdf
                 ? $"Converted {sourceSlug} to {targetSlug} ({artifact.Content.Length:N0} bytes) as {artifact.FileName}. " +
                   "Delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes."

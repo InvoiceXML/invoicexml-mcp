@@ -25,8 +25,26 @@ public sealed class InvoiceLine
     [Description("UN/ECE Recommendation 20 unit code (BT-130), e.g. 'EA' (each), 'HUR' (hour), 'DAY' (day). Defaults to C62 (one) server-side if omitted.")]
     public string? UnitCode { get; set; }
 
-    [Description("Line net amount (BT-131) = quantity * net unit price, excluding VAT. Server recomputes this if omitted.")]
+    [Description("Line net amount (BT-131) = quantity * net unit price, minus line allowances, plus line charges, excluding VAT. Server recomputes this if omitted.")]
     public decimal? LineNetAmount { get; set; }
+
+    [Description("Identifier of the object the line invoices (BT-128), e.g. a meter or subscription number, with an optional UNTDID 1153 scheme (BT-128-1).")]
+    public SchemeIdentifier? ObjectIdentifier { get; set; }
+
+    [Description("Line number of the buyer's purchase order this line refers to (BT-132). Optional.")]
+    public string? BuyerOrderLineReference { get; set; }
+
+    [Description("Buyer's accounting reference for this line (BT-133), e.g. a cost centre. Optional.")]
+    public string? LineBuyerAccountingReference { get; set; }
+
+    [Description("Service period this specific line covers (BG-26). Optional.")]
+    public Period? LinePeriod { get; set; }
+
+    [Description("Line allowances (BG-27), e.g. a line discount. Optional.")]
+    public List<LineAllowanceCharge>? Allowances { get; set; }
+
+    [Description("Line charges (BG-28), e.g. a handling fee on this line. Optional.")]
+    public List<LineAllowanceCharge>? Charges { get; set; }
 
     [Required(ErrorMessage = "Item information (BG-31) is required on every line.")]
     [Description("What's being invoiced: item name and description. Required.")]
@@ -40,7 +58,7 @@ public sealed class InvoiceLine
     [Description("VAT category and rate for this line. Required.")]
     public LineVatInformation? VatInformation { get; set; }
 
-    /// <summary>Additional line fields (ObjectIdentifier, period overrides, allowances/charges, ...) flow through unchanged.</summary>
+    /// <summary>Line fields not modelled above flow through to the API unchanged.</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Additional { get; set; }
 }

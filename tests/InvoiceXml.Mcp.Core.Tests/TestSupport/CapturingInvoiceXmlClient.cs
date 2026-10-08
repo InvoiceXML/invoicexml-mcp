@@ -8,8 +8,7 @@ namespace InvoiceXml.Mcp.Core.Tests.TestSupport;
 /// <see cref="IInvoiceXmlClient"/> test double that records what each method was
 /// called with and returns configurable canned results: a <see cref="ValidationResult"/>
 /// (valid by default) for the validate methods, and a <see cref="DocumentArtifact"/>
-/// for the artifact-producing methods (render / extract / embed / convert).
-/// <c>CreateInvoiceAsync</c> is not used by these tests.
+/// for the artifact-producing methods (render / extract / embed / convert / create).
 /// </summary>
 internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
 {
@@ -56,43 +55,104 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     public PdfLanguage? LastTransformLanguage { get; private set; }
     public string? LastTransformBuyerReference { get; private set; }
 
-    public InvoiceFormat? LastReportFormat { get; private set; }
+    public ValidationReportFormat? LastReportFormat { get; private set; }
     public byte[]? LastReportContent { get; private set; }
     public string? LastReportContentType { get; private set; }
+    public string? LastReportFileName { get; private set; }
     public bool? ReportVerdict { get; set; } = true;
+
+    // Optional fields forwarded by whichever method ran last.
+    public IReadOnlyList<ExtraRuleset>? LastRules { get; private set; }
+    public FooterBrand? LastFooterBrand { get; private set; }
+    public string? LastLogoUrl { get; private set; }
+
+    public OrderFormat? LastOrderFormat { get; private set; }
+    public InvoiceDocument? LastOrder { get; private set; }
+    public CreateOrderOptions? LastOrderOptions { get; private set; }
+
+    public byte[]? LastOrderValidationContent { get; private set; }
+    public string? LastOrderValidationContentType { get; private set; }
+
+    public AccountInfo Account { get; set; } = new()
+    {
+        Plan = "subscription",
+        CreditsRemaining = 1234,
+        CreditsTotal = 5000,
+        CreditsConsumed = 3766,
+        CreditsConsumedTotal = 20000,
+    };
+
+    public InvoiceFormat? LastCreateFormat { get; private set; }
+    public CreateInvoiceOptions? LastCreateOptions { get; private set; }
 
     public Task<CreateInvoiceResult> CreateInvoiceAsync(
         InvoiceFormat format, InvoiceDocument invoice, CreateInvoiceOptions? options, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException();
+    {
+        LastCreateFormat = format;
+        LastCreateOptions = options;
+        return Task.FromResult(new CreateInvoiceResult
+        {
+            Content = _artifact.Content,
+            ContentType = _artifact.ContentType,
+            FileName = _artifact.FileName,
+        });
+    }
+
+    public Task<DocumentArtifact> CreateOrderAsync(
+        OrderFormat format, InvoiceDocument order, CreateOrderOptions? options, CancellationToken cancellationToken = default)
+    {
+        LastOrderFormat = format;
+        LastOrder = order;
+        LastOrderOptions = options;
+        return Task.FromResult(_artifact);
+    }
+
+    public Task<ValidationResult> ValidateOrderAsync(
+        byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
+    {
+        LastOrderValidationContent = content;
+        LastOrderValidationContentType = contentType;
+        return Task.FromResult(_result);
+    }
+
+    public Task<AccountInfo> GetAccountAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(Account);
 
     public Task<ValidationResult> ValidateXmlAsync(
-        XmlInvoiceFormat format, string xml, CancellationToken cancellationToken = default)
+        XmlInvoiceFormat format, string xml, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
     {
+        LastRules = rules;
         LastXmlFormat = format;
         LastXml = xml;
         return Task.FromResult(_result);
     }
 
     public Task<ValidationResult> ValidatePdfAsync(
-        PdfInvoiceFormat format, byte[] pdf, CancellationToken cancellationToken = default)
+        PdfInvoiceFormat format, byte[] pdf, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
     {
+        LastRules = rules;
         LastPdfFormat = format;
         LastPdfBytes = pdf;
         return Task.FromResult(_result);
     }
 
     public Task<ValidationReportPdfResult> ValidationReportPdfAsync(
-        InvoiceFormat format, byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
+        ValidationReportFormat format, byte[] content, string contentType, string fileName, IReadOnlyList<ExtraRuleset>? rules, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
     {
+        LastRules = rules;
+        LastFooterBrand = footerBrand;
         LastReportFormat = format;
         LastReportContent = content;
         LastReportContentType = contentType;
+        LastReportFileName = fileName;
         return Task.FromResult(new ValidationReportPdfResult { Report = _artifact, Valid = ReportVerdict });
     }
 
     public Task<DocumentArtifact> RenderToPdfAsync(
-        XmlInvoiceFormat format, string xml, PdfLanguage language, CancellationToken cancellationToken = default)
+        XmlInvoiceFormat format, string xml, PdfLanguage language, string? logoUrl, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
     {
+        LastLogoUrl = logoUrl;
+        LastFooterBrand = footerBrand;
         LastRenderFormat = format;
         LastRenderXml = xml;
         LastRenderLanguage = language;
@@ -110,8 +170,9 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<DocumentArtifact> EmbedAsync(
-        PdfInvoiceFormat format, byte[] pdf, string ciiXml, CancellationToken cancellationToken = default)
+        PdfInvoiceFormat format, byte[] pdf, string ciiXml, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
     {
+        LastRules = rules;
         LastEmbedFormat = format;
         LastEmbedPdf = pdf;
         LastEmbedXml = ciiXml;
@@ -119,8 +180,9 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<DocumentArtifact> ConvertAsync(
-        InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
+        InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
     {
+        LastFooterBrand = footerBrand;
         LastConvertSource = source;
         LastConvertTarget = target;
         LastConvertContent = content;

@@ -10,7 +10,7 @@ namespace InvoiceXml.Mcp.Core.Tools;
 /// <summary>
 /// MCP tool that renders a plain-XML e-invoice (UBL / CII / XRechnung) into a
 /// human-readable PDF preview via <c>POST /v1/render/{format}/to/pdf</c>. The PDF
-/// is a visual face only — it is NOT a hybrid Factur-X / ZUGFeRD document (use
+/// is a visual face only; it is NOT a hybrid Factur-X / ZUGFeRD document (use
 /// <c>embed_invoice</c> for that).
 /// </summary>
 [McpServerToolType]
@@ -34,9 +34,12 @@ public sealed class RenderInvoiceTool
         "Factur-X / ZUGFeRD PDF (visual face + embedded XML) use 'embed_invoice' or 'create_invoice' instead. " +
         "\n\n" +
         "Provide the XML via EXACTLY ONE of these inputs:\n" +
-        "• xml — the XML document as text.\n" +
-        "• xmlUrl — a public https:// URL to the XML; the server downloads it. PREFER THIS for large documents.\n" +
+        "• xml: the XML document as text.\n" +
+        "• xmlUrl: a public https:// URL to the XML; the server downloads it. PREFER THIS for large documents.\n" +
         "If you set neither or both, the result is an input error explaining what to fix.\n" +
+        "\n" +
+        "Optional styling: logoUrl prints the seller's logo top-left, and footerBrand 'none' removes the " +
+        "InvoiceXML credit from the footer.\n" +
         "\n" +
         "Only use the ACTUAL text of the file. Never reconstruct, guess, or synthesize invoice XML. " +
         "If you cannot access the real file, ask the user for a public https:// URL (use xmlUrl) or to paste the document.\n" +
@@ -57,7 +60,15 @@ public sealed class RenderInvoiceTool
         string? xmlUrl = null,
 
         [Description("Language of the human-readable PDF face: EN, DE, or FR. Defaults to EN.")]
-        PdfLanguage language = PdfLanguage.EN)
+        PdfLanguage language = PdfLanguage.EN,
+
+        [Description(
+            "Public https:// URL of the seller's logo (PNG or JPEG, max 2 MB and 4 megapixels), printed top-left " +
+            "on the PDF. The server downloads it. Optional.")]
+        string? logoUrl = null,
+
+        [Description("Footer credit of the PDF: 'invoicexml' (default) or 'none' to omit it.")]
+        FooterBrand? footerBrand = null)
     {
         var slug = format.ToString().ToLowerInvariant();
 
@@ -86,7 +97,7 @@ public sealed class RenderInvoiceTool
 
         return await ArtifactTools.ExecuteAsync(
             slug,
-            () => _client.RenderToPdfAsync(format, xmlText, language, cancellationToken),
+            () => _client.RenderToPdfAsync(format, xmlText, language, logoUrl, footerBrand, cancellationToken),
             artifact =>
                 $"Rendered {slug} XML to a PDF preview ({artifact.Content.Length:N0} bytes) as {artifact.FileName}. " +
                 "The PDF is delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes.",

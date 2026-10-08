@@ -24,10 +24,10 @@ public class RenderValidationReportToolTests
         var client = new CapturingInvoiceXmlClient();
         var tool = Build(client);
 
-        var result = await tool.RenderValidationReportAsync(InvoiceFormat.Ubl, CancellationToken.None, xml: SampleXml);
+        var result = await tool.RenderValidationReportAsync(ValidationReportFormat.Ubl, CancellationToken.None, xml: SampleXml);
 
         Assert.False(result.IsError ?? false);
-        Assert.Equal(InvoiceFormat.Ubl, client.LastReportFormat);
+        Assert.Equal(ValidationReportFormat.Ubl, client.LastReportFormat);
         Assert.Equal("application/xml", client.LastReportContentType);
         Assert.Equal(SampleXml, Encoding.UTF8.GetString(client.LastReportContent!));
     }
@@ -41,10 +41,10 @@ public class RenderValidationReportToolTests
         var pdf = Encoding.ASCII.GetBytes("%PDF-1.7\n...\n%%EOF");
 
         var result = await tool.RenderValidationReportAsync(
-            InvoiceFormat.FacturX, CancellationToken.None, pdfBase64: Convert.ToBase64String(pdf));
+            ValidationReportFormat.FacturX, CancellationToken.None, pdfBase64: Convert.ToBase64String(pdf));
 
         Assert.False(result.IsError ?? false);
-        Assert.Equal(InvoiceFormat.FacturX, client.LastReportFormat);
+        Assert.Equal(ValidationReportFormat.FacturX, client.LastReportFormat);
         Assert.Equal("application/pdf", client.LastReportContentType);
         Assert.Equal(pdf, client.LastReportContent);
     }
@@ -55,7 +55,7 @@ public class RenderValidationReportToolTests
         var client = new CapturingInvoiceXmlClient { ReportVerdict = false };
         var tool = Build(client);
 
-        var result = await tool.RenderValidationReportAsync(InvoiceFormat.Cii, CancellationToken.None, xml: SampleXml);
+        var result = await tool.RenderValidationReportAsync(ValidationReportFormat.Cii, CancellationToken.None, xml: SampleXml);
 
         var summary = Assert.IsType<TextContentBlock>(result.Content[0]);
         Assert.Contains("NOT compliant", summary.Text);
@@ -66,7 +66,7 @@ public class RenderValidationReportToolTests
     {
         var tool = Build();
 
-        var result = await tool.RenderValidationReportAsync(InvoiceFormat.Ubl, CancellationToken.None, xml: SampleXml);
+        var result = await tool.RenderValidationReportAsync(ValidationReportFormat.Ubl, CancellationToken.None, xml: SampleXml);
 
         Assert.False(result.IsError ?? false);
         Assert.Equal(2, result.Content.Count);
@@ -79,7 +79,7 @@ public class RenderValidationReportToolTests
     {
         var tool = Build();
 
-        var result = await tool.RenderValidationReportAsync(InvoiceFormat.Ubl, CancellationToken.None);
+        var result = await tool.RenderValidationReportAsync(ValidationReportFormat.Ubl, CancellationToken.None);
 
         Assert.True(result.IsError);
         var block = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -91,7 +91,7 @@ public class RenderValidationReportToolTests
     {
         var tool = Build();
 
-        var result = await tool.RenderValidationReportAsync(InvoiceFormat.Zugferd, CancellationToken.None, xml: SampleXml);
+        var result = await tool.RenderValidationReportAsync(ValidationReportFormat.Zugferd, CancellationToken.None, xml: SampleXml);
 
         Assert.True(result.IsError);
         var block = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
@@ -104,7 +104,7 @@ public class RenderValidationReportToolTests
         var tool = Build();
 
         var result = await tool.RenderValidationReportAsync(
-            InvoiceFormat.XRechnung, CancellationToken.None, pdfUrl: "https://example.com/invoice.pdf");
+            ValidationReportFormat.XRechnung, CancellationToken.None, pdfUrl: "https://example.com/invoice.pdf");
 
         Assert.True(result.IsError);
         var block = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));

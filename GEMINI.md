@@ -32,12 +32,22 @@ Landing page: `https://www.invoicexml.com/mcp-server`.
 | `extract_invoice` | Pull the structured JSON or the embedded CII XML out of a hybrid PDF. |
 | `embed_invoice` | Combine a PDF and a CII XML into a Factur-X / ZUGFeRD hybrid PDF. |
 | `convert_invoice` | Convert between UBL, CII, XRechnung, Factur-X, and ZUGFeRD. |
+| `render_validation_report` | Validate an invoice or Order-X order and get the result as a printable PDF report. |
+| `create_order` | Generate an Order-X purchase order (hybrid PDF or Cross-Industry Order XML). |
+| `validate_order` | Check an Order-X PDF or Cross-Industry Order XML. |
+| `get_account` | Show the account's plan and remaining credits (free to call). |
 
 Pick by document type: use `validate_pdf_invoice` / `extract_invoice` for hybrid
 PDFs (Factur-X, ZUGFeRD), and `validate_xml_invoice` / `render_invoice` for plain
-XML (UBL, CII, XRechnung). `create_invoice` consumes an API credit and produces a
-new document, so it is the only tool that should require user approval; the others
-are read-only or transform operations.
+XML (UBL, CII, XRechnung). Factur-X invoices almost always go over the French
+e-invoicing network (a PDP / Plateforme Agréée), so pass `rules: ["br-fr"]` by
+default on every Factur-X `create_invoice`, `validate_pdf_invoice`, `embed_invoice`
+and `render_validation_report` call (the only tools that take `rules`), and leave
+it out only when the user explicitly says the invoice will not be sent over that
+network. For a French domestic UBL or CII invoice, ask the user and pass it if
+they say yes.
+`create_invoice` and `create_order` produce new documents, so they are the tools
+that should require user approval; the others are read-only or transform operations.
 
 ## Supported formats
 

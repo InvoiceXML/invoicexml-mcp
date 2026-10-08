@@ -1,6 +1,5 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
 using InvoiceXml.Mcp.Core.Enums;
 using InvoiceXml.Mcp.Core.Interfaces;
 using InvoiceXml.Mcp.Core.Models;
@@ -53,27 +52,82 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         };
     }
 
+    public async Task<DocumentArtifact> CreateOrderAsync(
+        OrderFormat format,
+        InvoiceDocument order,
+        CreateOrderOptions? options,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        var requestBody = new CreateOrderRequest
+        {
+            Order = order,
+            Options = options ?? new CreateOrderOptions(),
+        };
+
+        var slug = EnumWire.Slug(format);
+        var path = $"{ApiVersionPrefix}/create/{slug}";
+        using var response = await _http.PostAsJsonAsync(
+            path, requestBody, InvoiceXmlJsonOptions.Default, cancellationToken).ConfigureAwait(false);
+
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+
+        var defaultName = format is OrderFormat.OrderX ? "order-x.pdf" : "order-cio.xml";
+        return await ReadArtifactAsync(response, defaultName, cancellationToken).ConfigureAwait(false);
+    }
+
+    public Task<ValidationResult> ValidateOrderAsync(
+        byte[] content,
+        string contentType,
+        string fileName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        if (content.Length == 0)
+            throw new ArgumentException("Content bytes must not be empty.", nameof(content));
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+
+        return ValidateAsync(EnumWire.Slug(ValidationReportFormat.OrderX), content, contentType, fileName, rules: null, cancellationToken);
+    }
+
+    public async Task<AccountInfo> GetAccountAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync($"{ApiVersionPrefix}/me", cancellationToken).ConfigureAwait(false);
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+
+        var account = await response.Content
+            .ReadFromJsonAsync<AccountInfo>(InvoiceXmlJsonOptions.Default, cancellationToken)
+            .ConfigureAwait(false);
+
+        return account ?? throw new InvalidOperationException(
+            "InvoiceXML API returned an empty account response.");
+    }
+
     public Task<ValidationResult> ValidateXmlAsync(
         XmlInvoiceFormat format,
         string xml,
+        IReadOnlyList<ExtraRuleset>? rules,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(xml);
 
         var xmlBytes = System.Text.Encoding.UTF8.GetBytes(xml);
-        return ValidateAsync(Slug(format), xmlBytes, "application/xml", "invoice.xml", cancellationToken);
+        return ValidateAsync(Slug(format), xmlBytes, "application/xml", "invoice.xml", rules, cancellationToken);
     }
 
     public Task<ValidationResult> ValidatePdfAsync(
         PdfInvoiceFormat format,
         byte[] pdf,
+        IReadOnlyList<ExtraRuleset>? rules,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pdf);
         if (pdf.Length == 0)
             throw new ArgumentException("PDF bytes must not be empty.", nameof(pdf));
 
-        return ValidateAsync(Slug(format), pdf, "application/pdf", "invoice.pdf", cancellationToken);
+        return ValidateAsync(Slug(format), pdf, "application/pdf", "invoice.pdf", rules, cancellationToken);
     }
 
     private async Task<ValidationResult> ValidateAsync(
@@ -81,12 +135,14 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         byte[] content,
         string contentType,
         string fileName,
+        IReadOnlyList<ExtraRuleset>? rules,
         CancellationToken cancellationToken)
     {
         using var form = new MultipartFormDataContent();
         var fileContent = new ByteArrayContent(content);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         form.Add(fileContent, "file", fileName);
+        AddRules(form, rules);
 
         var path = $"{ApiVersionPrefix}/validate/{slug}";
         using var response = await _http.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
@@ -101,10 +157,12 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public async Task<ValidationReportPdfResult> ValidationReportPdfAsync(
-        InvoiceFormat format,
+        ValidationReportFormat format,
         byte[] content,
         string contentType,
         string fileName,
+        IReadOnlyList<ExtraRuleset>? rules,
+        FooterBrand? footerBrand,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -115,13 +173,15 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
 
         using var form = new MultipartFormDataContent();
         form.Add(FilePart(content, contentType), "file", fileName);
+        AddRules(form, rules);
+        AddFooterBrand(form, footerBrand);
 
-        var path = $"{ApiVersionPrefix}/validate/{Slug(format)}/report";
+        var path = $"{ApiVersionPrefix}/validate/{EnumWire.Slug(format)}/report";
         using var response = await _http.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
 
         var artifact = await ReadArtifactAsync(
-            response, $"validation-report-{Slug(format)}.pdf", cancellationToken).ConfigureAwait(false);
+            response, $"validation-report-{EnumWire.Slug(format)}.pdf", cancellationToken).ConfigureAwait(false);
 
         // The verdict rides in a response header so callers can branch on
         // validity without parsing the PDF; absent or unreadable means unknown.
@@ -139,6 +199,8 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         XmlInvoiceFormat format,
         string xml,
         PdfLanguage language,
+        string? logoUrl,
+        FooterBrand? footerBrand,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(xml);
@@ -147,6 +209,10 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         form.Add(FilePart(System.Text.Encoding.UTF8.GetBytes(xml), "application/xml"), "file", "invoice.xml");
         // API form field is a lower-case language code (en / de / fr); default is en.
         form.Add(new StringContent(language.ToString().ToLowerInvariant()), "language");
+        // The API fetches the logo itself (SSRF-guarded, re-encoded), so only the URL travels.
+        if (!string.IsNullOrWhiteSpace(logoUrl))
+            form.Add(new StringContent(logoUrl), "logoUrl");
+        AddFooterBrand(form, footerBrand);
 
         var path = $"{ApiVersionPrefix}/render/{Slug(format)}/to/pdf";
         return SendForArtifactAsync(path, form, "rendered-invoice.pdf", cancellationToken);
@@ -183,6 +249,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         PdfInvoiceFormat format,
         byte[] pdf,
         string ciiXml,
+        IReadOnlyList<ExtraRuleset>? rules,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pdf);
@@ -193,6 +260,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         var form = new MultipartFormDataContent();
         form.Add(FilePart(pdf, "application/pdf"), "pdf", "invoice.pdf");
         form.Add(FilePart(System.Text.Encoding.UTF8.GetBytes(ciiXml), "application/xml"), "xml", "invoice.xml");
+        AddRules(form, rules);
 
         var path = $"{ApiVersionPrefix}/embed/{Slug(format)}";
         return SendForArtifactAsync(path, form, $"invoice-{Slug(format)}.pdf", cancellationToken);
@@ -204,6 +272,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         byte[] content,
         string contentType,
         string fileName,
+        FooterBrand? footerBrand,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -215,8 +284,12 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         var form = new MultipartFormDataContent();
         form.Add(FilePart(content, contentType), "file", fileName);
 
-        var path = $"{ApiVersionPrefix}/convert/{Slug(source)}/to/{Slug(target)}";
+        // Only the render-and-embed promotions (XML to a hybrid PDF) print a footer.
         var ext = target is InvoiceFormat.FacturX or InvoiceFormat.Zugferd ? "pdf" : "xml";
+        if (ext == "pdf")
+            AddFooterBrand(form, footerBrand);
+
+        var path = $"{ApiVersionPrefix}/convert/{Slug(source)}/to/{Slug(target)}";
         return SendForArtifactAsync(path, form, $"invoice-{Slug(target)}.{ext}", cancellationToken);
     }
 
@@ -244,6 +317,22 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         var path = $"{ApiVersionPrefix}/transform/to/{Slug(target)}";
         var ext = target is InvoiceFormat.FacturX or InvoiceFormat.Zugferd ? "pdf" : "xml";
         return SendForArtifactAsync(path, form, $"invoice-{Slug(target)}.{ext}", cancellationToken);
+    }
+
+    // The API binds 'rules' as a string array: one form part per value.
+    private static void AddRules(MultipartFormDataContent form, IReadOnlyList<ExtraRuleset>? rules)
+    {
+        if (rules is null)
+            return;
+        foreach (var rule in rules.Distinct())
+            form.Add(new StringContent(EnumWire.Slug(rule)), "rules");
+    }
+
+    // Omitted when unset so the API's own default credit stays in charge.
+    private static void AddFooterBrand(MultipartFormDataContent form, FooterBrand? footerBrand)
+    {
+        if (footerBrand is { } brand)
+            form.Add(new StringContent(EnumWire.Slug(brand)), "footerBrand");
     }
 
     private static ByteArrayContent FilePart(byte[] bytes, string contentType)

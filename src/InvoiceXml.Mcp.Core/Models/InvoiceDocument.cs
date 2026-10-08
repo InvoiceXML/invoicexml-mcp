@@ -53,24 +53,61 @@ public sealed class InvoiceDocument
     [Description("Specification identifier (BT-24), e.g. 'urn:cen.eu:en16931:2017'. Optional: defaults are applied per format server-side.")]
     public string? SpecificationId { get; set; }
 
-    [Description("Buyer reference (BT-10). Carries the Leitweg-ID in XRechnung. Optional.")]
+    [Description("Business process type (BT-23), e.g. 'urn:fdc:peppol.eu:2017:poacc:billing:01:1.0'. Optional: defaults are applied per format server-side.")]
+    public string? BusinessProcessType { get; set; }
+
+    [Description("Buyer reference (BT-10). Carries the Leitweg-ID in XRechnung, where it is required. Optional otherwise.")]
     public string? BuyerReference { get; set; }
 
     [Description("Purchase order reference (BT-13). Optional.")]
     public string? PurchaseOrderReference { get; set; }
 
+    [Description("Invoice notes (BG-1): free text (BT-22) with an optional subject code (BT-21). Optional.")]
+    public List<InvoiceNote>? Notes { get; set; }
+
+    [Description(
+        "UNTDID 2005 code stating when VAT becomes due (BT-8): '3' (invoice issue date), '35' (delivery date), " +
+        "'432' (paid to date). Optional.")]
+    public string? VatPointDateCode { get; set; }
+
+    [Description(
+        "Invoices this document credits or corrects (BG-3). Set it on credit notes and corrected invoices so the " +
+        "receiver can tie the document back to the original; several national rule sets require it.")]
+    public List<PrecedingInvoiceReference>? PrecedingInvoiceReferences { get; set; }
+
+    [Description("Supporting documents (BG-24): timesheets, delivery notes, tender references, attached files. Optional.")]
+    public List<SupportingDocument>? SupportingDocuments { get; set; }
+
     [Required(ErrorMessage = "Seller (BG-4) is required.")]
     [Description("Seller party (BG-4). Required.")]
-    public Party? Seller { get; set; }
+    public SellerParty? Seller { get; set; }
 
     [Required(ErrorMessage = "Buyer (BG-7) is required.")]
     [Description("Buyer party (BG-7). Required.")]
-    public Party? Buyer { get; set; }
+    public BuyerParty? Buyer { get; set; }
+
+    [Description("Delivery information (BG-13): deliver-to party, location, actual delivery date and address. Optional.")]
+    public DeliveryInformation? Delivery { get; set; }
+
+    [Description("Invoicing period (BG-14): the service or billing period the whole invoice covers. Optional.")]
+    public Period? InvoicingPeriod { get; set; }
+
+    [Description(
+        "Payment instructions (BG-16) and payment terms (BT-20): payment means code, IBAN, BIC, account name, " +
+        "remittance reference, direct debit mandate. Mandatory in XRechnung; recommended everywhere so the " +
+        "buyer knows how to pay.")]
+    public PaymentDetails? PaymentDetails { get; set; }
 
     [Required(ErrorMessage = "Invoice must contain at least one line item (BR-16).")]
     [MinLength(1, ErrorMessage = "Invoice must contain at least one line item (BR-16).")]
     [Description("Invoice line items (BG-25). At least one is required.")]
     public List<InvoiceLine>? Lines { get; set; }
+
+    [Description("Document level allowances (BG-20), e.g. an overall discount. Their sum goes in totals.sumOfAllowances. Optional.")]
+    public List<DocumentAllowanceCharge>? Allowances { get; set; }
+
+    [Description("Document level charges (BG-21), e.g. freight or packaging. Their sum goes in totals.sumOfCharges. Optional.")]
+    public List<DocumentAllowanceCharge>? Charges { get; set; }
 
     [Description("Document-level totals (BG-22). Mandatory under EN 16931; validated server-side.")]
     public DocumentTotals? Totals { get; set; }
@@ -79,9 +116,9 @@ public sealed class InvoiceDocument
     public List<VatBreakdown>? VatBreakdowns { get; set; }
 
     /// <summary>
-    /// Any invoice field not explicitly modelled above (<c>notes</c>, <c>precedingInvoiceReferences</c>,
-    /// <c>delivery</c>, <c>invoicingPeriod</c>, <c>paymentDetails</c>, <c>allowances</c>, <c>charges</c>,
-    /// <c>businessProcessType</c>, ...) flows through to the API verbatim via this dictionary.
+    /// Any invoice field not explicitly modelled above flows through to the API
+    /// verbatim via this dictionary, so a new API field works before this
+    /// mirror catches up.
     /// </summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Additional { get; set; }

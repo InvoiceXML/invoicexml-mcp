@@ -66,7 +66,13 @@ InvoiceXml.Mcp.Core  --ProjectReference-->  InvoiceXml.Mcp.Host
 ## Tools (current MCP surface)
 
 `create_invoice`, `validate_xml_invoice`, `validate_pdf_invoice`,
-`render_invoice`, `extract_invoice`, `embed_invoice`, `convert_invoice`.
+`render_validation_report`, `render_invoice`, `extract_invoice`, `embed_invoice`,
+`convert_invoice`, `transform_invoice`, `create_order`, `validate_order`, `get_account`.
+
+The `InvoiceDocument` model mirrors the API's `InvoiceDocument` field for field
+(camelCase wire names); `ToolSchemaTests` guards what the advertised schema
+exposes. The optional `rules` parameter is refused with `INPUT-RULES` on formats
+whose API route does not bind it, so a requested rule set is never skipped silently.
 
 They live in `src/InvoiceXml.Mcp.Core/Tools/`. File inputs prefer a public
 `https://` URL (`*Url` params) over inline base64. Tools never throw on bad input:

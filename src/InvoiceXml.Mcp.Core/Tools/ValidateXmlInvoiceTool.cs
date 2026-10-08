@@ -47,6 +47,9 @@ public sealed class ValidateXmlInvoiceTool
         "(long inline XML can get corrupted when written into a tool call).\n" +
         "If you set neither or both, the result is valid=false with an INPUT-… error explaining what to fix.\n" +
         "\n" +
+        "rules ['br-fr'] also checks the French e-invoicing rules (formats 'ubl' and 'cii' only). " +
+        ExtraRules.AskForFrenchNetworkGuidance + "\n" +
+        "\n" +
         "Only use the ACTUAL text of the file. Never reconstruct, guess, or synthesize invoice XML. " +
         "If you cannot access the real file (e.g. a user uploaded it and you can't read its contents), do NOT call " +
         "this tool with made-up XML; ask the user for a public https:// URL (use xmlUrl) or to paste the document.\n" +
@@ -64,8 +67,15 @@ public sealed class ValidateXmlInvoiceTool
         string? xml = null,
 
         [Description("A public https:// URL to the XML; the server fetches it. Provide exactly one of xml / xmlUrl.")]
-        string? xmlUrl = null)
+        string? xmlUrl = null,
+
+        [Description(ExtraRules.ParameterDescription + " Formats 'ubl' and 'cii' only.")]
+        List<ExtraRuleset>? rules = null)
     {
+        var rulesError = ExtraRules.Unsupported(rules, format.ToString().ToLowerInvariant(), "ubl", "cii");
+        if (rulesError is not null)
+            return FileInputResolver.InputError("INPUT-RULES", rulesError, ["rules"]);
+
         var exclusive = FileInputResolver.ValidateExactlyOne(
         [
             ("xml", !string.IsNullOrWhiteSpace(xml)),
@@ -92,7 +102,7 @@ public sealed class ValidateXmlInvoiceTool
 
         try
         {
-            return await _client.ValidateXmlAsync(format, xmlText, cancellationToken).ConfigureAwait(false);
+            return await _client.ValidateXmlAsync(format, xmlText, rules, cancellationToken).ConfigureAwait(false);
         }
         catch (InvoiceXmlApiException ex)
         {

@@ -35,6 +35,9 @@ public sealed class EmbedInvoiceTool
         "Provide the CII XML via EXACTLY ONE of: xml (text) or xmlUrl.\n" +
         "If a required pair is empty or has both set, the result is an input error explaining what to fix.\n" +
         "\n" +
+        "The XML is validated before embedding; rules ['br-fr'] also checks the French e-invoicing rules " +
+        "(format 'facturx' only). " + ExtraRules.FacturXDefaultGuidance + "\n" +
+        "\n" +
         "Only use the ACTUAL bytes/text of the files. Never reconstruct, guess, or synthesize content. " +
         "If you cannot access a real file, ask the user for a public https:// URL or to paste it.\n" +
         "\n" +
@@ -57,9 +60,16 @@ public sealed class EmbedInvoiceTool
         string? xml = null,
 
         [Description("A public https:// URL to the CII XML. Provide exactly one of xml / xmlUrl.")]
-        string? xmlUrl = null)
+        string? xmlUrl = null,
+
+        [Description(ExtraRules.ParameterDescription + " Format 'facturx' only.")]
+        List<ExtraRuleset>? rules = null)
     {
         var slug = format.ToString().ToLowerInvariant();
+
+        var rulesError = ExtraRules.Unsupported(rules, slug, "facturx");
+        if (rulesError is not null)
+            return ArtifactTools.InputError("INPUT-RULES", rulesError, ["rules"], slug);
 
         var pdfExclusive = ArtifactTools.ValidateExactlyOne(
         [
@@ -105,7 +115,7 @@ public sealed class EmbedInvoiceTool
         if (PdfSniffer.IsIncompletePdf(pdfBytes))
         {
             return ArtifactTools.InputError("INPUT-INCOMPLETE-PDF",
-                $"Received {pdfBytes.Length:N0} bytes that start like a PDF but have no %%EOF trailer — " +
+                $"Received {pdfBytes.Length:N0} bytes that start like a PDF but have no %%EOF trailer; " +
                 "the file is truncated or was reconstructed. If you don't have the real file bytes, " +
                 "do not rebuild them: pass a public https:// URL via pdfUrl instead.",
                 ["pdfBase64", "pdfUrl"], slug);
@@ -128,7 +138,7 @@ public sealed class EmbedInvoiceTool
 
         return await ArtifactTools.ExecuteAsync(
             slug,
-            () => _client.EmbedAsync(format, pdfBytes, ciiXml, cancellationToken),
+            () => _client.EmbedAsync(format, pdfBytes, ciiXml, rules, cancellationToken),
             artifact =>
                 $"Embedded the CII XML into a {slug} hybrid PDF/A-3 ({artifact.Content.Length:N0} bytes) as {artifact.FileName}. " +
                 "Delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes.",
