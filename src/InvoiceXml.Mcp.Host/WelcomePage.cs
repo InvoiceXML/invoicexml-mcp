@@ -161,7 +161,7 @@ internal sealed class WelcomePageMiddleware
             </ul>
 
             <p class="foot">
-              Powered by <a href="https://invoicexml.com">InvoiceXML</a>.
+              Powered by <a href="https://www.invoicexml.com">InvoiceXML</a>.
               Health endpoint: <a href="/health">/health</a>.
               Source: <a href="https://github.com/invoicexml/invoicexml-mcp">github.com/invoicexml/invoicexml-mcp</a>.
             </p>

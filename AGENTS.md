@@ -11,7 +11,7 @@ this file is the high-signal summary.
 ## What this is
 
 A Model Context Protocol server (C# / .NET 10) that exposes the
-[InvoiceXML API](https://invoicexml.com) to AI agents: create, validate, render,
+[InvoiceXML API](https://www.invoicexml.com) to AI agents: create, validate, render,
 extract, embed, and convert e-invoices across Factur-X, ZUGFeRD, XRechnung,
 UBL / CII, and Peppol BIS Billing 3.0.
 

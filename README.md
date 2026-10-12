@@ -1,7 +1,7 @@
 # InvoiceXML MCP Server
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that exposes the
-[InvoiceXML API](https://invoicexml.com) to AI agents. Covers Factur-X, ZUGFeRD,
+[InvoiceXML API](https://www.invoicexml.com) to AI agents. Covers Factur-X, ZUGFeRD,
 XRechnung, UBL / CII, and Peppol BIS Billing 3.0.
 
 The same codebase runs in two deployment shapes, selected at startup by one

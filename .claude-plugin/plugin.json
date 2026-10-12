@@ -5,7 +5,7 @@
   "description": "Create, validate, convert, render, and extract compliant e-invoices (Factur-X, ZUGFeRD, XRechnung, UBL, CII, Peppol BIS Billing 3.0) from your AI agent via the InvoiceXML MCP server.",
   "author": {
     "name": "InvoiceXML",
-    "url": "https://invoicexml.com"
+    "url": "https://www.invoicexml.com"
   },
   "homepage": "https://www.invoicexml.com/mcp-server",
   "repository": "https://github.com/InvoiceXML/invoicexml-mcp",
