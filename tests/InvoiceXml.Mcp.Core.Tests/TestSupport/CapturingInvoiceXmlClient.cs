@@ -65,6 +65,7 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     public IReadOnlyList<ExtraRuleset>? LastRules { get; private set; }
     public FooterBrand? LastFooterBrand { get; private set; }
     public string? LastLogoUrl { get; private set; }
+    public string? LastLogo { get; private set; }
 
     public OrderFormat? LastOrderFormat { get; private set; }
     public InvoiceDocument? LastOrder { get; private set; }
@@ -149,9 +150,10 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<DocumentArtifact> RenderToPdfAsync(
-        XmlInvoiceFormat format, string xml, PdfLanguage language, string? logoUrl, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
+        XmlInvoiceFormat format, string xml, PdfLanguage language, string? logoUrl, string? logo, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
     {
         LastLogoUrl = logoUrl;
+        LastLogo = logo;
         LastFooterBrand = footerBrand;
         LastRenderFormat = format;
         LastRenderXml = xml;

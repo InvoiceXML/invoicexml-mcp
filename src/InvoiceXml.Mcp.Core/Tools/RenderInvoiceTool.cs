@@ -38,8 +38,9 @@ public sealed class RenderInvoiceTool
         "• xmlUrl: a public https:// URL to the XML; the server downloads it. PREFER THIS for large documents.\n" +
         "If you set neither or both, the result is an input error explaining what to fix.\n" +
         "\n" +
-        "Optional styling: logoUrl prints the seller's logo top-left, and footerBrand 'none' removes the " +
-        "InvoiceXML credit from the footer.\n" +
+        "Optional styling: logoUrl prints the seller's logo top-left (or logo, the image itself as base64, " +
+        "for a logo that is not at a public URL; set one of the two, not both), and footerBrand 'none' " +
+        "removes the InvoiceXML credit from the footer.\n" +
         "\n" +
         "Only use the ACTUAL text of the file. Never reconstruct, guess, or synthesize invoice XML. " +
         "If you cannot access the real file, ask the user for a public https:// URL (use xmlUrl) or to paste the document.\n" +
@@ -64,8 +65,11 @@ public sealed class RenderInvoiceTool
 
         [Description(
             "Public https:// URL of the seller's logo (PNG or JPEG, max 2 MB and 4 megapixels), printed top-left " +
-            "on the PDF. The server downloads it. Optional.")]
+            "on the PDF. The server downloads it. To send the image itself instead, use 'logo'. Optional.")]
         string? logoUrl = null,
+
+        [Description(InlineLogo.ParameterDescription + " Optional.")]
+        string? logo = null,
 
         [Description("Footer credit of the PDF: 'invoicexml' (default) or 'none' to omit it.")]
         FooterBrand? footerBrand = null)
@@ -79,6 +83,10 @@ public sealed class RenderInvoiceTool
         ], slug);
         if (exclusive is not null)
             return exclusive;
+
+        var logoError = InlineLogo.Refused(logo, logoUrl, prefix: "");
+        if (logoError is not null)
+            return ArtifactTools.InputError("INPUT-LOGO", logoError, ["logo"], slug);
 
         string xmlText;
         if (!string.IsNullOrWhiteSpace(xml))
@@ -97,7 +105,7 @@ public sealed class RenderInvoiceTool
 
         return await ArtifactTools.ExecuteAsync(
             slug,
-            () => _client.RenderToPdfAsync(format, xmlText, language, logoUrl, footerBrand, cancellationToken),
+            () => _client.RenderToPdfAsync(format, xmlText, language, logoUrl, logo, footerBrand, cancellationToken),
             artifact =>
                 $"Rendered {slug} XML to a PDF preview ({artifact.Content.Length:N0} bytes) as {artifact.FileName}. " +
                 "The PDF is delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes.",

@@ -191,7 +191,7 @@ public class CreateInvoiceToolTests
             => throw new NotImplementedException();
 
         public Task<DocumentArtifact> RenderToPdfAsync(
-            XmlInvoiceFormat format, string xml, PdfLanguage language, string? logoUrl, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
+            XmlInvoiceFormat format, string xml, PdfLanguage language, string? logoUrl, string? logo, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<DocumentArtifact> ExtractAsync(
@@ -242,7 +242,7 @@ public class CreateInvoiceToolTests
             => Task.FromException<ValidationReportPdfResult>(ex);
 
         public Task<DocumentArtifact> RenderToPdfAsync(
-            XmlInvoiceFormat format, string xml, PdfLanguage language, string? logoUrl, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
+            XmlInvoiceFormat format, string xml, PdfLanguage language, string? logoUrl, string? logo, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
             => Task.FromException<DocumentArtifact>(ex);
 
         public Task<DocumentArtifact> ExtractAsync(

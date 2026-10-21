@@ -200,6 +200,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         string xml,
         PdfLanguage language,
         string? logoUrl,
+        string? logo,
         FooterBrand? footerBrand,
         CancellationToken cancellationToken = default)
     {
@@ -209,9 +210,17 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         form.Add(FilePart(System.Text.Encoding.UTF8.GetBytes(xml), "application/xml"), "file", "invoice.xml");
         // API form field is a lower-case language code (en / de / fr); default is en.
         form.Add(new StringContent(language.ToString().ToLowerInvariant()), "language");
-        // The API fetches the logo itself (SSRF-guarded, re-encoded), so only the URL travels.
+        // The API fetches a logoUrl itself (SSRF-guarded, re-encoded), so only the URL travels.
         if (!string.IsNullOrWhiteSpace(logoUrl))
             form.Add(new StringContent(logoUrl), "logoUrl");
+        // The image itself goes as the logo file part; the API gates it by signature, so the
+        // part's own type only has to be an image type.
+        if (!string.IsNullOrWhiteSpace(logo))
+        {
+            var bytes = Convert.FromBase64String(logo);
+            var png = bytes.Length >= 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47;
+            form.Add(FilePart(bytes, png ? "image/png" : "image/jpeg"), "logo", png ? "logo.png" : "logo.jpg");
+        }
         AddFooterBrand(form, footerBrand);
 
         var path = $"{ApiVersionPrefix}/render/{Slug(format)}/to/pdf";

@@ -84,20 +84,25 @@ public sealed class CreateInvoiceTool
             "Optional creation settings: 'language' (every format), 'profile' (UBL CIUS selection, format 'ubl' only), " +
             "'syntax' (XML syntax 'ubl' or 'cii', format 'xrechnung' only), " +
             "'rules' (extra national rules such as 'br-fr', formats 'facturx'/'cii'/'ubl'), and the hybrid-PDF " +
-            "visual settings 'brandColor', 'logoUrl', 'pdfUrl', 'includeAdvancedProperties' and 'footerBrand' " +
-            "(formats 'facturx'/'zugferd' only). Every field is optional.")]
+            "visual settings 'brandColor', 'logo', 'logoUrl', 'pdfUrl', 'includeAdvancedProperties' and " +
+            "'footerBrand' (formats 'facturx'/'zugferd' only). Every field is optional.")]
         CreateInvoiceOptions? options,
 
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(invoice);
 
-        // The create routes bill even a 400, so an unsupported rule set is refused
-        // here rather than spending a credit on the API's own refusal.
+        // The create routes bill even a 400, so an unsupported rule set or a logo
+        // the API would refuse is turned down here rather than spending a credit
+        // on the API's own refusal.
         var slug = format.ToString().ToLowerInvariant();
         var rulesError = ExtraRules.Unsupported(options?.Rules, slug, "ubl", "cii", "facturx");
         if (rulesError is not null)
             return ArtifactTools.InputError("INPUT-RULES", rulesError, ["options.rules"], slug);
+
+        var logoError = InlineLogo.Refused(options?.Logo, options?.LogoUrl, "options.");
+        if (logoError is not null)
+            return ArtifactTools.InputError("INPUT-LOGO", logoError, ["options.logo"], slug);
 
         try
         {

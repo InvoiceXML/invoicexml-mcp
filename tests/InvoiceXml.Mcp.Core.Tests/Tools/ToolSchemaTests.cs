@@ -37,6 +37,7 @@ public class ToolSchemaTests
     [InlineData("options.rules")]
     [InlineData("options.syntax")]
     [InlineData("options.logoUrl")]
+    [InlineData("options.logo")]
     [InlineData("options.footerBrand")]
     [InlineData("options.language")]
     public void CreateInvoice_SchemaAdvertisesField(string path)

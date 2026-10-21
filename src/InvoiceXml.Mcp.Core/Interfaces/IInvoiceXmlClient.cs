@@ -101,13 +101,15 @@ public interface IInvoiceXmlClient
     /// Calls <c>POST /v1/render/{format}/to/pdf</c> with the supplied XML uploaded
     /// as <c>multipart/form-data</c>. Returns the rendered visual PDF preview.
     /// <paramref name="logoUrl"/> is fetched by the API, not by this client;
-    /// <paramref name="footerBrand"/> is omitted when null.
+    /// <paramref name="logo"/> (the image itself as plain base64) travels as the
+    /// <c>logo</c> file part; <paramref name="footerBrand"/> is omitted when null.
     /// </summary>
     Task<DocumentArtifact> RenderToPdfAsync(
         XmlInvoiceFormat format,
         string xml,
         PdfLanguage language,
         string? logoUrl,
+        string? logo,
         FooterBrand? footerBrand,
         CancellationToken cancellationToken = default);
 

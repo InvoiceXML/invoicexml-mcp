@@ -114,6 +114,24 @@ public class HttpInvoiceXmlClientTests
     }
 
     [Fact]
+    public async Task CreateInvoiceAsync_SerializesLogoOptionAsBase64Text()
+    {
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, [0x25, 0x50, 0x44, 0x46], "application/pdf", "invoice-facturx.pdf"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+        var logo = Convert.ToBase64String([0x89, 0x50, 0x4E, 0x47]);
+
+        await client.CreateInvoiceAsync(
+            InvoiceFormat.FacturX,
+            new InvoiceDocument { InvoiceNumber = "10", Currency = "EUR" },
+            new CreateInvoiceOptions { Logo = logo },
+            CancellationToken.None);
+
+        Assert.Contains($"\"logo\":\"{logo}\"", handler.LastRequestBody);
+        Assert.DoesNotContain("\"logoUrl\"", handler.LastRequestBody);
+    }
+
+    [Fact]
     public async Task CreateInvoiceAsync_SerializesExpandedModelWithApiWireNames()
     {
         var responsePayload = "<Invoice xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:Invoice-2\" />"u8.ToArray();
@@ -300,12 +318,13 @@ public class HttpInvoiceXmlClientTests
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
         var result = await client.RenderToPdfAsync(
-            XmlInvoiceFormat.XRechnung, "<Invoice/>", PdfLanguage.DE, logoUrl: null, footerBrand: null, CancellationToken.None);
+            XmlInvoiceFormat.XRechnung, "<Invoice/>", PdfLanguage.DE, logoUrl: null, logo: null, footerBrand: null, CancellationToken.None);
 
         Assert.Equal("/v1/render/xrechnung/to/pdf", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.StartsWith("multipart/form-data", handler.LastRequest.Content!.Headers.ContentType!.MediaType);
         Assert.Contains("language", handler.LastRequestBody); // the language form field is present
         Assert.DoesNotContain("logoUrl", handler.LastRequestBody);
+        Assert.DoesNotContain("name=logo", handler.LastRequestBody);
         Assert.DoesNotContain("footerBrand", handler.LastRequestBody);
         Assert.Equal("application/pdf", result.ContentType);
         Assert.Equal("rendered.pdf", result.FileName);
@@ -320,12 +339,31 @@ public class HttpInvoiceXmlClientTests
 
         await client.RenderToPdfAsync(
             XmlInvoiceFormat.Ubl, "<Invoice/>", PdfLanguage.EN,
-            logoUrl: "https://example.test/logo.png", footerBrand: FooterBrand.None, CancellationToken.None);
+            logoUrl: "https://example.test/logo.png", logo: null, footerBrand: FooterBrand.None, CancellationToken.None);
 
         Assert.Contains("name=logoUrl", handler.LastRequestBody);
         Assert.Contains("https://example.test/logo.png", handler.LastRequestBody);
         Assert.Contains("name=footerBrand", handler.LastRequestBody);
         Assert.Contains("none", handler.LastRequestBody);
+    }
+
+    [Theory]
+    [InlineData(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }, "image/png", "logo.png")]
+    [InlineData(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, "image/jpeg", "logo.jpg")]
+    public async Task RenderToPdfAsync_SendsLogoAsAnImageFilePart(byte[] image, string contentType, string fileName)
+    {
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, [0x25, 0x50, 0x44, 0x46], "application/pdf", "rendered.pdf"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        await client.RenderToPdfAsync(
+            XmlInvoiceFormat.Ubl, "<Invoice/>", PdfLanguage.EN,
+            logoUrl: null, logo: Convert.ToBase64String(image), footerBrand: null, CancellationToken.None);
+
+        // The form is disposed once sent, so the part is checked on the captured body text.
+        Assert.Contains($"name=logo; filename={fileName}", handler.LastRequestBody);
+        Assert.Contains($"Content-Type: {contentType}", handler.LastRequestBody);
+        Assert.DoesNotContain("logoUrl", handler.LastRequestBody);
     }
 
     [Fact]

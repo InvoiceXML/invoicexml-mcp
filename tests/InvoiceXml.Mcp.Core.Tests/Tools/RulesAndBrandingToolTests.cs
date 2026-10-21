@@ -185,6 +185,94 @@ public class RulesAndBrandingToolTests
     }
 
     [Fact]
+    public async Task Render_ForwardsTheLogoSentAsTheImageItself()
+    {
+        var client = new CapturingInvoiceXmlClient();
+        var tool = new RenderInvoiceTool(client, new FakeRemoteFileFetcher([]));
+
+        var result = await tool.RenderInvoiceAsync(
+            XmlInvoiceFormat.Ubl, CancellationToken.None, xml: SampleUbl, logo: SampleLogo);
+
+        Assert.False(result.IsError ?? false);
+        Assert.Equal(SampleLogo, client.LastLogo);
+        Assert.Null(client.LastLogoUrl);
+    }
+
+    // The API answers these with a 4002; the tool says so first, naming the field.
+    [Theory]
+    [InlineData("data:image/png;base64,iVBORw0KGgo=", null)]
+    [InlineData("not base64!", null)]
+    [InlineData(SampleLogo, "https://example.test/logo.png")]
+    public async Task Render_RefusesAnUnusableLogoWithoutCallingTheApi(string logo, string? logoUrl)
+    {
+        var client = new CapturingInvoiceXmlClient();
+        var tool = new RenderInvoiceTool(client, new FakeRemoteFileFetcher([]));
+
+        var result = await tool.RenderInvoiceAsync(
+            XmlInvoiceFormat.Ubl, CancellationToken.None, xml: SampleUbl, logoUrl: logoUrl, logo: logo);
+
+        Assert.True(result.IsError);
+        var block = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INPUT-LOGO", block.Text);
+        Assert.Contains("\"logo\"", block.Text);
+        Assert.Null(client.LastRenderFormat);
+    }
+
+    [Theory]
+    [InlineData("data:image/png;base64,iVBORw0KGgo=", null)]
+    [InlineData("not base64!", null)]
+    [InlineData(SampleLogo, "https://example.test/logo.png")]
+    public async Task CreateInvoice_RefusesAnUnusableLogoWithoutSpendingACredit(string logo, string? logoUrl)
+    {
+        var client = new CapturingInvoiceXmlClient();
+        var tool = new CreateInvoiceTool(client);
+
+        var result = await tool.CreateInvoiceAsync(
+            InvoiceFormat.FacturX, new InvoiceDocument { InvoiceNumber = "1", Currency = "EUR" },
+            new CreateInvoiceOptions { Logo = logo, LogoUrl = logoUrl }, CancellationToken.None);
+
+        Assert.True(result.IsError);
+        var block = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INPUT-LOGO", block.Text);
+        Assert.Contains("options.logo", block.Text);
+        Assert.Null(client.LastCreateFormat);
+    }
+
+    [Fact]
+    public async Task CreateOrder_RefusesLogoAndLogoUrlTogetherWithoutSpendingACredit()
+    {
+        var client = new CapturingInvoiceXmlClient();
+        var tool = new CreateOrderTool(client);
+
+        var result = await tool.CreateOrderAsync(
+            OrderFormat.OrderX, new InvoiceDocument { InvoiceNumber = "PO-1", Currency = "EUR" },
+            new CreateOrderOptions { Logo = SampleLogo, LogoUrl = "https://example.test/logo.png" }, CancellationToken.None);
+
+        Assert.True(result.IsError);
+        var block = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INPUT-LOGO", block.Text);
+        Assert.Contains("options.logo", block.Text);
+        Assert.Null(client.LastOrderFormat);
+    }
+
+    [Fact]
+    public async Task CreateOrder_ForwardsTheLogoSentAsTheImageItself()
+    {
+        var client = new CapturingInvoiceXmlClient();
+        var tool = new CreateOrderTool(client);
+
+        var result = await tool.CreateOrderAsync(
+            OrderFormat.OrderX, new InvoiceDocument { InvoiceNumber = "PO-1", Currency = "EUR" },
+            new CreateOrderOptions { Logo = SampleLogo }, CancellationToken.None);
+
+        Assert.False(result.IsError ?? false);
+        Assert.Equal(SampleLogo, client.LastOrderOptions!.Logo);
+    }
+
+    // A PNG signature as base64: valid base64 the API's own gates would accept the start of.
+    private const string SampleLogo = "iVBORw0KGgo=";
+
+    [Fact]
     public async Task Convert_ForwardsFooterBrand()
     {
         var client = new CapturingInvoiceXmlClient();

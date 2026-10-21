@@ -52,7 +52,7 @@ public sealed class CreateOrderTool
 
         [Description(
             "Optional settings: 'profile' and 'typeCode' (both formats), and the PDF settings 'language', " +
-            "'brandColor', 'logoUrl', 'pdfUrl' and 'footerBrand' (format 'order-x' only). Every field is optional.")]
+            "'brandColor', 'logo', 'logoUrl', 'pdfUrl' and 'footerBrand' (format 'order-x' only). Every field is optional.")]
         CreateOrderOptions? options,
 
         CancellationToken cancellationToken)
@@ -60,6 +60,12 @@ public sealed class CreateOrderTool
         ArgumentNullException.ThrowIfNull(order);
 
         var slug = EnumWire.Slug(format);
+
+        // The create routes bill even a 400, so a logo the API would refuse is
+        // turned down here rather than spending a credit on the API's own refusal.
+        var logoError = InlineLogo.Refused(options?.Logo, options?.LogoUrl, "options.");
+        if (logoError is not null)
+            return Task.FromResult(ArtifactTools.InputError("INPUT-LOGO", logoError, ["options.logo"], slug));
 
         return ArtifactTools.ExecuteAsync(
             slug,

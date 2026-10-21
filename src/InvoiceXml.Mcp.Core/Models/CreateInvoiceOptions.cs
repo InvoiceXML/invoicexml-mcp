@@ -48,15 +48,22 @@ public sealed class CreateInvoiceOptions
     [Description(
         "Public https:// URL of a PDF to use as the visual layer of the hybrid invoice, formats 'facturx' and " +
         "'zugferd' only. When set, the API downloads it and embeds the generated XML into it instead of rendering " +
-        "the built-in template; 'language' then only affects the XML texts, and 'brandColor', 'logoUrl' and " +
-        "'footerBrand' have no effect. Max 20 MB.")]
+        "the built-in template; 'language' then only affects the XML texts, and 'brandColor', 'logo', 'logoUrl' " +
+        "and 'footerBrand' have no effect. Max 20 MB.")]
     public string? PdfUrl { get; set; }
 
     [Description(
         "Public https:// URL of the seller's logo (PNG or JPEG, max 2 MB and 4 megapixels), printed top-left on " +
-        "the rendered PDF face. Formats 'facturx' and 'zugferd' with the built-in template only; ignored when " +
-        "'pdfUrl' is set.")]
+        "the rendered PDF face. To send the image itself instead, use 'logo'; set one of the two, not both. " +
+        "Formats 'facturx' and 'zugferd' with the built-in template only; ignored when 'pdfUrl' is set.")]
     public string? LogoUrl { get; set; }
+
+    [Description(
+        "The seller's logo as the PNG or JPEG file itself, in plain base64 without a data: prefix (max 2 MB " +
+        "decoded and 4 megapixels), printed top-left on the rendered PDF face exactly as 'logoUrl' would be. " +
+        "Use it for a logo that is not at a public URL. Set 'logo' or 'logoUrl', not both. Formats 'facturx' " +
+        "and 'zugferd' with the built-in template only; ignored when 'pdfUrl' is set.")]
+    public string? Logo { get; set; }
 
     [Description(
         "When true, the rendered PDF face gains an 'Electronic invoice details' section listing the technical " +

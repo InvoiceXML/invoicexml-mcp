@@ -23,13 +23,21 @@ public sealed class CreateOrderOptions
 
     [Description(
         "Public https:// URL of a PDF to use as the visual layer instead of the built-in order template. " +
-        "Format 'order-x' only; 'language', 'brandColor', 'logoUrl' and 'footerBrand' then have no effect.")]
+        "Format 'order-x' only; 'language', 'brandColor', 'logo', 'logoUrl' and 'footerBrand' then have no effect.")]
     public string? PdfUrl { get; set; }
 
     [Description(
         "Public https:// URL of the buyer's logo (PNG or JPEG, max 2 MB and 4 megapixels), printed top-left on the " +
-        "rendered order. Format 'order-x' only; ignored when 'pdfUrl' is set.")]
+        "rendered order. To send the image itself instead, use 'logo'; set one of the two, not both. " +
+        "Format 'order-x' only; ignored when 'pdfUrl' is set.")]
     public string? LogoUrl { get; set; }
+
+    [Description(
+        "The buyer's logo as the PNG or JPEG file itself, in plain base64 without a data: prefix (max 2 MB " +
+        "decoded and 4 megapixels), printed top-left on the rendered order exactly as 'logoUrl' would be. " +
+        "Use it for a logo that is not at a public URL. Set 'logo' or 'logoUrl', not both. Format 'order-x' " +
+        "only; ignored when 'pdfUrl' is set.")]
+    public string? Logo { get; set; }
 
     [Description("Footer credit on the rendered PDF face: 'invoicexml' (default) or 'none' to omit it. Format 'order-x' only.")]
     public FooterBrand? FooterBrand { get; set; }

@@ -179,7 +179,7 @@ public class ValidatePdfInvoiceToolTests
             => Task.FromException<Models.ValidationReportPdfResult>(ex);
 
         public Task<Models.DocumentArtifact> RenderToPdfAsync(
-            XmlInvoiceFormat format, string xml, PdfLanguage language, string? logoUrl, FooterBrand? footerBrand, CancellationToken ct = default)
+            XmlInvoiceFormat format, string xml, PdfLanguage language, string? logoUrl, string? logo, FooterBrand? footerBrand, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public Task<Models.DocumentArtifact> ExtractAsync(
