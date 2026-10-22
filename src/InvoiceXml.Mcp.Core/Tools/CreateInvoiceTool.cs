@@ -58,6 +58,9 @@ public sealed class CreateInvoiceTool
         "this produces a proper UBL CreditNote document (CreditNote root element and CreditNoteLine items) and " +
         "validates it against the matching credit note rules; the CII-based formats carry the type code in the " +
         "same CrossIndustryInvoice structure. " +
+        "To credit a self-billed invoice (typeCode 'SelfBilledInvoice', UNTDID 389), use typeCode " +
+        "'SelfBilledCreditNote' (UNTDID 261) the same way. Peppol BIS does not accept 261, so for format 'ubl' " +
+        "set options.profile to 'en16931'. " +
         "\n\n" +
         "Fill paymentDetails (IBAN, payment means) whenever the buyer is expected to pay, and use notes, delivery, " +
         "invoicingPeriod, allowances and charges when the source invoice has them. " +

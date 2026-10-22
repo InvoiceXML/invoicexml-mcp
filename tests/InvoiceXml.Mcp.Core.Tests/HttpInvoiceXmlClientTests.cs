@@ -96,6 +96,23 @@ public class HttpInvoiceXmlClientTests
     }
 
     [Fact]
+    public async Task CreateInvoiceAsync_SendsSelfBilledCreditNoteTypeCodeByName()
+    {
+        var pdf = new byte[] { 0x25, 0x50, 0x44, 0x46 }; // "%PDF"
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, pdf, "application/pdf", "invoice-zugferd.pdf"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        await client.CreateInvoiceAsync(
+            InvoiceFormat.Zugferd,
+            new InvoiceDocument { InvoiceNumber = "GS-7", Currency = "EUR", TypeCode = InvoiceTypeCode.SelfBilledCreditNote },
+            options: null,
+            CancellationToken.None);
+
+        Assert.Contains("\"typeCode\":\"SelfBilledCreditNote\"", handler.LastRequestBody);
+    }
+
+    [Fact]
     public async Task CreateInvoiceAsync_SerializesLogoUrlAndFooterBrandOptions()
     {
         var pdf = new byte[] { 0x25, 0x50, 0x44, 0x46 };
