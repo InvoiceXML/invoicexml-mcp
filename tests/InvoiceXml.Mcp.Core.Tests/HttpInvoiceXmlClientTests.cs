@@ -399,6 +399,62 @@ public class HttpInvoiceXmlClientTests
         Assert.DoesNotContain("footerBrand", xmlHandler.LastRequestBody);
     }
 
+    [Fact]
+    public async Task TransformAsync_HybridTarget_SendsAutoLanguageByDefault_AndNoPreserveField()
+    {
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, [0x25, 0x50, 0x44, 0x46], "application/pdf", "invoice-zugferd.pdf"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        var result = await client.TransformAsync(
+            InvoiceFormat.Zugferd, [0x25, 0x50, 0x44, 0x46], language: null, preserveOriginalPdf: false, buyerReference: null, CancellationToken.None);
+
+        Assert.Equal("/v1/transform/to/zugferd", handler.LastRequest!.RequestUri!.AbsolutePath);
+        var body = handler.LastRequestBody!;
+        Assert.Contains("name=language", body);
+        Assert.Contains(HttpInvoiceXmlClient.AutoTransformLanguage, body);
+        Assert.DoesNotContain("preserveOriginalPdf", body);
+        Assert.DoesNotContain("buyerReference", body);
+        Assert.Equal("invoice-zugferd.pdf", result.FileName);
+    }
+
+    [Fact]
+    public async Task TransformAsync_HybridTarget_SendsLanguageAndPreserveOriginalPdfWhenSet()
+    {
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, [0x25, 0x50, 0x44, 0x46], "application/pdf", "invoice-facturx.pdf"));
+
+        await new HttpInvoiceXmlClient(BuildClient(handler)).TransformAsync(
+            InvoiceFormat.FacturX, [0x25, 0x50, 0x44, 0x46], PdfLanguage.FR, preserveOriginalPdf: true, buyerReference: null, CancellationToken.None);
+
+        var body = handler.LastRequestBody!;
+        Assert.Contains("name=language", body);
+        Assert.Contains("fr", body);
+        Assert.DoesNotContain(HttpInvoiceXmlClient.AutoTransformLanguage, body);
+        Assert.Contains("name=preserveOriginalPdf", body);
+        Assert.Contains("true", body);
+    }
+
+    [Fact]
+    public async Task TransformAsync_XmlTargets_SendOnlyTheFieldsTheirRouteBinds()
+    {
+        var xrechnung = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, "<x/>"u8.ToArray(), "application/xml", "invoice-xrechnung.xml"));
+        await new HttpInvoiceXmlClient(BuildClient(xrechnung)).TransformAsync(
+            InvoiceFormat.XRechnung, [0x25, 0x50, 0x44, 0x46], PdfLanguage.DE, preserveOriginalPdf: true, buyerReference: "04011000-12345-67", CancellationToken.None);
+        Assert.Contains("name=buyerReference", xrechnung.LastRequestBody);
+        Assert.Contains("04011000-12345-67", xrechnung.LastRequestBody);
+        Assert.DoesNotContain("name=language", xrechnung.LastRequestBody);
+        Assert.DoesNotContain("preserveOriginalPdf", xrechnung.LastRequestBody);
+
+        var ubl = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, "<x/>"u8.ToArray(), "application/xml", "invoice-ubl.xml"));
+        await new HttpInvoiceXmlClient(BuildClient(ubl)).TransformAsync(
+            InvoiceFormat.Ubl, [0x25, 0x50, 0x44, 0x46], language: null, preserveOriginalPdf: false, buyerReference: null, CancellationToken.None);
+        Assert.DoesNotContain("name=language", ubl.LastRequestBody);
+        Assert.DoesNotContain("buyerReference", ubl.LastRequestBody);
+    }
+
     private static int CountOccurrences(string text, string value)
     {
         var count = 0;

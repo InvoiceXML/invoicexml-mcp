@@ -11,8 +11,9 @@ namespace InvoiceXml.Mcp.Core.Tools;
 /// MCP tool that pulls content out of an e-invoice via
 /// <c>POST /v1/extract/{json|xml|attachments}</c>: the structured invoice
 /// document as JSON, the embedded EN 16931 CII XML, or the embedded supporting
-/// documents as a ZIP. The json/xml targets read a hybrid PDF/A-3 (Factur-X /
-/// ZUGFeRD); the attachments target also accepts a plain CII / UBL invoice XML.
+/// documents as a ZIP. The json and attachments targets read a hybrid PDF/A-3
+/// (Factur-X / ZUGFeRD) or a plain CII / UBL invoice XML; the xml target reads a
+/// hybrid PDF only, since the embedded XML is what it pulls out.
 /// </summary>
 [McpServerToolType]
 public sealed class ExtractInvoiceTool
@@ -36,15 +37,16 @@ public sealed class ExtractInvoiceTool
         "timesheets or delivery notes) bundled as a ZIP archive. Documents referenced only by external URI " +
         "(BT-124) are not downloaded, and an invoice with no embedded attachments returns an error saying so. " +
         "\n\n" +
-        "Targets 'json' and 'xml' read a hybrid PDF/A-3 e-invoice (Factur-X or ZUGFeRD); the PDF must contain an " +
-        "embedded XML attachment, otherwise the result is an error. Target 'attachments' additionally accepts a " +
-        "plain CII or UBL invoice XML, since XML invoices can carry embedded attachments too. " +
+        "Targets 'json' and 'attachments' read a hybrid PDF/A-3 e-invoice (Factur-X or ZUGFeRD) or a plain CII / UBL " +
+        "invoice XML, so 'json' is also the way to show the content of an XML invoice (one you just created, " +
+        "converted or transformed) as readable fields. Target 'xml' reads a hybrid PDF only; the PDF must contain an " +
+        "embedded XML attachment, otherwise the result is an error. " +
         "\n\n" +
         "Provide the document via EXACTLY ONE of these inputs:\n" +
         "• pdfUrl: a public https:// URL to the PDF; the server downloads it. PREFER THIS whenever a URL exists.\n" +
         "• pdfBase64: the PDF as base64. Only practical for small files; larger base64 gets corrupted in a tool call.\n" +
-        "• xml: the invoice XML as text (target 'attachments' only).\n" +
-        "• xmlUrl: a public https:// URL to the XML (target 'attachments' only).\n" +
+        "• xml: the invoice XML as text (targets 'json' and 'attachments').\n" +
+        "• xmlUrl: a public https:// URL to the XML (targets 'json' and 'attachments').\n" +
         "If you set none or several, the result is an input error explaining what to fix.\n" +
         "\n" +
         "Only use the ACTUAL bytes/text of the file. Never reconstruct, guess, or synthesize a document. " +
@@ -65,10 +67,10 @@ public sealed class ExtractInvoiceTool
         [Description("The PDF as base64 (small files only). Provide exactly one input.")]
         string? pdfBase64 = null,
 
-        [Description("For target 'attachments' only: the invoice XML (CII or UBL) as text. Provide exactly one input.")]
+        [Description("For targets 'json' and 'attachments': the invoice XML (CII or UBL) as text. Provide exactly one input.")]
         string? xml = null,
 
-        [Description("For target 'attachments' only: a public https:// URL to the invoice XML. Provide exactly one input.")]
+        [Description("For targets 'json' and 'attachments': a public https:// URL to the invoice XML. Provide exactly one input.")]
         string? xmlUrl = null)
     {
         var slug = target.ToString().ToLowerInvariant();
@@ -84,11 +86,11 @@ public sealed class ExtractInvoiceTool
             return exclusive;
 
         var providedXml = !string.IsNullOrWhiteSpace(xml) || !string.IsNullOrWhiteSpace(xmlUrl);
-        if (providedXml && target != ExtractTarget.Attachments)
+        if (providedXml && target == ExtractTarget.Xml)
         {
             return ArtifactTools.InputError("INPUT-SOURCE-MISMATCH",
-                $"Target '{slug}' extracts from a hybrid PDF; provide the document via pdfUrl or pdfBase64. " +
-                "XML input (xml / xmlUrl) is only accepted by target 'attachments'.",
+                "Target 'xml' pulls the embedded XML out of a hybrid PDF; provide the document via pdfUrl or pdfBase64. " +
+                "XML input (xml / xmlUrl) is accepted by targets 'json' and 'attachments'.",
                 ["xml", "xmlUrl"], slug);
         }
 
@@ -134,7 +136,7 @@ public sealed class ExtractInvoiceTool
             artifact => target switch
             {
                 ExtractTarget.Json =>
-                    $"Extracted a structured invoice document (JSON, {artifact.Content.Length:N0} bytes) from the PDF. " +
+                    $"Extracted a structured invoice document (JSON, {artifact.Content.Length:N0} bytes) from the {(providedXml ? "XML" : "PDF")}. " +
                     "The response is included inline below; the document fields sit under its 'invoice' key.",
                 ExtractTarget.Attachments =>
                     $"Extracted the embedded supporting documents from the invoice as {artifact.FileName} ({artifact.Content.Length:N0} bytes). " +

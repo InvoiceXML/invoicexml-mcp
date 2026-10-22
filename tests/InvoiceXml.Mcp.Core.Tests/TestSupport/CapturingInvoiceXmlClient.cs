@@ -53,6 +53,7 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     public InvoiceFormat? LastTransformTarget { get; private set; }
     public byte[]? LastTransformPdf { get; private set; }
     public PdfLanguage? LastTransformLanguage { get; private set; }
+    public bool? LastTransformPreserveOriginalPdf { get; private set; }
     public string? LastTransformBuyerReference { get; private set; }
 
     public ValidationReportFormat? LastReportFormat { get; private set; }
@@ -193,11 +194,12 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<DocumentArtifact> TransformAsync(
-        InvoiceFormat target, byte[] pdf, PdfLanguage language, string? buyerReference, CancellationToken cancellationToken = default)
+        InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, string? buyerReference, CancellationToken cancellationToken = default)
     {
         LastTransformTarget = target;
         LastTransformPdf = pdf;
         LastTransformLanguage = language;
+        LastTransformPreserveOriginalPdf = preserveOriginalPdf;
         LastTransformBuyerReference = buyerReference;
         return Task.FromResult(_artifact);
     }

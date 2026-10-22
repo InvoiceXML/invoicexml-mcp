@@ -207,7 +207,7 @@ public class CreateInvoiceToolTests
             => throw new NotImplementedException();
 
         public Task<DocumentArtifact> TransformAsync(
-            InvoiceFormat target, byte[] pdf, PdfLanguage language, string? buyerReference, CancellationToken cancellationToken = default)
+            InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, string? buyerReference, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
     }
 
@@ -258,7 +258,7 @@ public class CreateInvoiceToolTests
             => Task.FromException<DocumentArtifact>(ex);
 
         public Task<DocumentArtifact> TransformAsync(
-            InvoiceFormat target, byte[] pdf, PdfLanguage language, string? buyerReference, CancellationToken cancellationToken = default)
+            InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, string? buyerReference, CancellationToken cancellationToken = default)
             => Task.FromException<DocumentArtifact>(ex);
     }
 }

@@ -66,6 +66,35 @@ public class ToolSchemaTests
     }
 
     [Theory]
+    [InlineData("language")]
+    [InlineData("preserveOriginalPdf")]
+    [InlineData("buyerReference")]
+    public void TransformInvoice_SchemaAdvertisesField(string path)
+    {
+        var schema = InputSchema<TransformInvoiceTool>(nameof(TransformInvoiceTool.TransformInvoiceAsync));
+
+        Assert.True(TryResolve(schema, path, out _), $"transform_invoice schema does not expose '{path}'.");
+    }
+
+    [Fact]
+    public void TransformInvoice_LanguageSchemaOffersTheThreeRenderLanguages()
+    {
+        var schema = InputSchema<TransformInvoiceTool>(nameof(TransformInvoiceTool.TransformInvoiceAsync));
+
+        Assert.True(TryResolve(schema, "language", out var language));
+        Assert.Equal(["DE", "EN", "FR"], EnumValues(language).Order().ToArray());
+    }
+
+    [Fact]
+    public void TransformInvoice_TellsTheAgentToWarnAboutAiAndOfferAPreview()
+    {
+        var method = typeof(TransformInvoiceTool).GetMethod(nameof(TransformInvoiceTool.TransformInvoiceAsync))!;
+        var description = McpServerTool.Create(method, typeof(TransformInvoiceTool)).ProtocolTool.Description;
+
+        Assert.Contains(TransformInvoiceTool.AiReviewGuidance, description);
+    }
+
+    [Theory]
     [InlineData(typeof(CreateInvoiceTool), nameof(CreateInvoiceTool.CreateInvoiceAsync))]
     [InlineData(typeof(ValidatePdfInvoiceTool), nameof(ValidatePdfInvoiceTool.ValidatePdfAsync))]
     [InlineData(typeof(EmbedInvoiceTool), nameof(EmbedInvoiceTool.EmbedInvoiceAsync))]

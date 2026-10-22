@@ -11,13 +11,42 @@ namespace InvoiceXml.Mcp.Core.Tools;
 /// MCP tool that transforms ANY PDF invoice into an EN 16931 e-invoice via
 /// <c>POST /v1/transform/to/{target}</c>. Unlike <c>convert_invoice</c> (which only
 /// transcodes the XML already embedded in a hybrid Factur-X / ZUGFeRD PDF), this runs
-/// data extraction over the PDF, so it also handles a plain (non-hybrid) invoice PDF.
+/// AI data extraction over the PDF, so it also handles a plain (non-hybrid) invoice PDF.
 /// XML targets (ubl / cii / xrechnung) return XML; hybrid-PDF targets (facturx /
-/// zugferd) return a PDF/A-3 with the XML embedded.
+/// zugferd) return a PDF/A-3 with the XML embedded, its pages rendered from the
+/// extracted data or, with <c>preserveOriginalPdf</c>, kept from the upload. Because the
+/// data comes out of an AI read, the tool text makes the agent warn the user and offer
+/// a preview of what was read (<see cref="AiReviewGuidance"/>).
 /// </summary>
 [McpServerToolType]
 public sealed class TransformInvoiceTool
 {
+    /// <summary>
+    /// What the agent owes the user after a successful transform: the data came out of an
+    /// AI extraction, so the user hears that first and is offered a look at what was read,
+    /// as a PDF or in the chat, before the invoice goes anywhere. Part of the tool
+    /// description; pinned by the schema tests.
+    /// </summary>
+    public const string AiReviewGuidance =
+        "AFTER EVERY SUCCESSFUL CALL, before anything else, tell the user that the invoice data was read from the " +
+        "PDF by AI and that they must check it against the source document themselves before the invoice is used " +
+        "or sent: amounts, dates, parties, line items and VAT can be misread. Never present the result as verified. " +
+        "Then offer a preview of the extracted data and let the user choose:\n" +
+        "• As a PDF: for an XML target (ubl / cii / xrechnung) call render_invoice with the same format and the " +
+        "returned XML, and hand the user the PDF. For a facturx / zugferd target the returned PDF already shows " +
+        "the extracted data on its pages, unless preserveOriginalPdf was set, in which case the pages are the " +
+        "user's own and the extracted data sits only in the embedded XML.\n" +
+        "• In the chat: call extract_invoice with target 'json' and present the fields in a readable form (seller, " +
+        "buyer, dates, lines, VAT breakdown, totals), pointing out anything that looks off. For an XML target pass " +
+        "the returned XML as 'xml'. For a facturx / zugferd target the input is the produced PDF, which you can " +
+        "only send once the user gives you a public https:// URL to it; never read the attachment's bytes for this.\n" +
+        "Give the warning even when the user declines the preview.";
+
+    /// <summary>The reminder every success summary ends with, so the warning is not left to the description alone.</summary>
+    public const string ReviewReminder =
+        "The invoice data was read by AI: tell the user to check it against the source PDF before the invoice is " +
+        "used or sent, and offer a preview of what was read (as a PDF, or in the chat).";
+
     private readonly IInvoiceXmlClient _client;
     private readonly IRemoteFileFetcher _fetcher;
 
@@ -29,7 +58,7 @@ public sealed class TransformInvoiceTool
 
     [McpServerTool(Name = "transform_invoice", Title = "Transform PDF to E-Invoice", ReadOnly = false, Destructive = false, OpenWorld = true)]
     [Description(
-        "Turn a PDF invoice into a structured EN 16931 e-invoice by extracting its data and rebuilding it. " +
+        "Turn a PDF invoice into a structured EN 16931 e-invoice by reading its data with AI and rebuilding it. " +
         "USE THIS when the source is a PDF that does NOT already contain embedded e-invoice XML " +
         "(an ordinary/visual invoice PDF), or when you are unsure whether the PDF is a hybrid. " +
         "It reads the invoice data out of the PDF and produces the target format. " +
@@ -40,12 +69,15 @@ public sealed class TransformInvoiceTool
         "(ubl/cii/xrechnung) return XML; hybrid-PDF targets (facturx/zugferd) return a PDF/A-3.\n" +
         "\n" +
         "Provide the source PDF via EXACTLY ONE of these inputs:\n" +
-        "• pdfUrl — a public https:// URL to the PDF; the server downloads it. PREFER THIS whenever a URL exists.\n" +
-        "• pdfBase64 — the PDF as base64. Only practical for small files; larger base64 gets corrupted in a tool call.\n" +
+        "• pdfUrl: a public https:// URL to the PDF; the server downloads it. PREFER THIS whenever a URL exists.\n" +
+        "• pdfBase64: the PDF as base64. Only practical for small files; larger base64 gets corrupted in a tool call.\n" +
         "If you set neither or both, the result is an input error explaining what to fix.\n" +
         "\n" +
-        "For a facturx / zugferd target, 'language' sets the human-readable PDF face (EN, DE, FR; default EN). " +
-        "For an xrechnung target, 'buyerReference' supplies the BT-10 buyer reference (Leitweg-ID) XRechnung requires.\n" +
+        "For a facturx / zugferd target, 'language' sets the language of the rendered PDF pages and of the default " +
+        "texts in the XML (EN, DE or FR; leave it out to follow the language the invoice is written in, English when " +
+        "that is none of the three), and 'preserveOriginalPdf' keeps the uploaded PDF as the pages and only embeds " +
+        "the XML built from it. For an xrechnung target, 'buyerReference' supplies the BT-10 buyer reference " +
+        "(Leitweg-ID) XRechnung requires.\n" +
         "\n" +
         "Only use the ACTUAL bytes of the file. Never reconstruct, guess, or synthesize a PDF. " +
         "If you cannot access the real file, ask the user for a public https:// URL (use pdfUrl) or to paste its base64.\n" +
@@ -53,6 +85,8 @@ public sealed class TransformInvoiceTool
         "On success the result is a short summary plus the document: XML targets inline as text, " +
         "PDF (facturx/zugferd) targets as an embedded resource attachment. On failure the result has isError=true " +
         "and a JSON body with { success:false, failureCategory, errors[], guidance, invoiceData? }.\n" +
+        "\n" +
+        AiReviewGuidance + "\n" +
         "\n" +
         "RECOVERY: when failureCategory is 'Validation' the body also carries 'invoiceData', the EN 16931 " +
         "invoice this tool managed to extract from the PDF. Do NOT just retry transform_invoice with the same PDF " +
@@ -71,8 +105,17 @@ public sealed class TransformInvoiceTool
         [Description("The source PDF as base64 (small files only). Provide exactly one of pdfUrl / pdfBase64.")]
         string? pdfBase64 = null,
 
-        [Description("For a facturx / zugferd target: language of the human-readable PDF face. EN, DE, or FR. Defaults to EN.")]
-        PdfLanguage language = PdfLanguage.EN,
+        [Description(
+            "For a facturx / zugferd target: language of the rendered PDF pages and of the default texts in the " +
+            "embedded XML. EN, DE or FR; leave it out for the language the invoice is written in (English when " +
+            "that is none of the three).")]
+        PdfLanguage? language = null,
+
+        [Description(
+            "For a facturx / zugferd target: keep the uploaded PDF as the visual pages and only embed the XML " +
+            "built from it; earlier attachments and form fields are not kept. Default false: the pages are " +
+            "rendered fresh from the extracted data.")]
+        bool preserveOriginalPdf = false,
 
         [Description("For an xrechnung target: the BT-10 buyer reference (Leitweg-ID) required by XRechnung.")]
         string? buyerReference = null)
@@ -95,11 +138,16 @@ public sealed class TransformInvoiceTool
 
         return await ArtifactTools.ExecuteAsync(
             slug,
-            () => _client.TransformAsync(targetFormat, bytes!, language, buyerReference, cancellationToken),
+            () => _client.TransformAsync(targetFormat, bytes!, language, preserveOriginalPdf, buyerReference, cancellationToken),
             artifact => targetIsPdf
                 ? $"Transformed the source PDF into a {slug} invoice ({artifact.Content.Length:N0} bytes) as {artifact.FileName}. " +
-                  "Delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes."
-                : $"Transformed the source PDF into a {slug} invoice ({artifact.Content.Length:N0} bytes) as {artifact.FileName}. The {slug} XML is included inline below.",
+                  "Delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes. " +
+                  (preserveOriginalPdf
+                      ? "The pages are the uploaded PDF's own; the extracted data is in the embedded XML only. "
+                      : "Its pages are rendered from the extracted data, so the file doubles as the PDF preview. ") +
+                  ReviewReminder
+                : $"Transformed the source PDF into a {slug} invoice ({artifact.Content.Length:N0} bytes) as {artifact.FileName}. " +
+                  $"The {slug} XML is included inline below. " + ReviewReminder,
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -136,7 +184,7 @@ public sealed class TransformInvoiceTool
         if (PdfSniffer.IsIncompletePdf(bytes))
         {
             return (null, ArtifactTools.InputError("INPUT-INCOMPLETE-PDF",
-                $"Received {bytes.Length:N0} bytes that start like a PDF but have no %%EOF trailer — " +
+                $"Received {bytes.Length:N0} bytes that start like a PDF but have no %%EOF trailer: " +
                 "the file is truncated or was reconstructed. If you don't have the real file bytes, " +
                 "do not rebuild them: pass a public https:// URL via pdfUrl instead.",
                 ["pdfBase64", "pdfUrl"], slug));

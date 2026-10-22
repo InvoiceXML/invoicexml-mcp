@@ -133,13 +133,36 @@ public class ExtractInvoiceToolTests
     }
 
     [Fact]
-    public async Task XmlInputForJsonTarget_ReturnsSourceMismatch()
+    public async Task JsonTarget_XmlInput_ForwardsXmlContentType()
+    {
+        // The API parses a plain UBL / CII invoice into the same JSON envelope, which is
+        // how an agent shows the content of a transformed XML invoice in the chat.
+        var client = new CapturingInvoiceXmlClient(artifact: new DocumentArtifact
+        {
+            Content = Encoding.UTF8.GetBytes("{\"invoice\":{\"invoiceNumber\":\"1\"}}"),
+            ContentType = "application/json",
+            FileName = "invoice.json",
+        });
+        var tool = Build(client);
+        const string invoiceXml = "<CrossIndustryInvoice/>";
+
+        var result = await tool.ExtractInvoiceAsync(ExtractTarget.Json, CancellationToken.None, xml: invoiceXml);
+
+        Assert.False(result.IsError ?? false);
+        Assert.Equal(ExtractTarget.Json, client.LastExtractTarget);
+        Assert.Equal("application/xml", client.LastExtractContentType);
+        Assert.Equal(invoiceXml, Encoding.UTF8.GetString(client.LastExtractContent!));
+        Assert.Contains("from the XML", Assert.IsType<TextContentBlock>(result.Content[0]).Text);
+    }
+
+    [Fact]
+    public async Task XmlInputForXmlTarget_ReturnsSourceMismatch()
     {
         var client = new CapturingInvoiceXmlClient();
         var tool = Build(client);
 
         var result = await tool.ExtractInvoiceAsync(
-            ExtractTarget.Json, CancellationToken.None, xml: "<CrossIndustryInvoice/>");
+            ExtractTarget.Xml, CancellationToken.None, xml: "<CrossIndustryInvoice/>");
 
         Assert.True(result.IsError);
         var block = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));

@@ -302,10 +302,14 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         return SendForArtifactAsync(path, form, $"invoice-{Slug(target)}.{ext}", cancellationToken);
     }
 
+    // The transform language that lets the API follow the language the invoice is written in.
+    internal const string AutoTransformLanguage = "auto";
+
     public Task<DocumentArtifact> TransformAsync(
         InvoiceFormat target,
         byte[] pdf,
-        PdfLanguage language,
+        PdfLanguage? language,
+        bool preserveOriginalPdf,
         string? buyerReference,
         CancellationToken cancellationToken = default)
     {
@@ -317,11 +321,19 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         form.Add(FilePart(pdf, "application/pdf"), "file", "invoice.pdf");
 
         // The XRechnung route needs an explicit buyer reference (BT-10); the hybrid-PDF
-        // routes take a language for the visual face. Other routes ignore extra fields.
+        // routes take a language for the pages and the XML's default texts (auto lets the
+        // detected language decide) and a switch that keeps the uploaded pages, omitted
+        // when off so the API's default applies. Other routes ignore extra fields.
         if (target is InvoiceFormat.XRechnung)
+        {
             form.Add(new StringContent(buyerReference ?? string.Empty), "buyerReference");
+        }
         else if (target is InvoiceFormat.FacturX or InvoiceFormat.Zugferd)
-            form.Add(new StringContent(language.ToString().ToLowerInvariant()), "language");
+        {
+            form.Add(new StringContent(language?.ToString().ToLowerInvariant() ?? AutoTransformLanguage), "language");
+            if (preserveOriginalPdf)
+                form.Add(new StringContent("true"), "preserveOriginalPdf");
+        }
 
         var path = $"{ApiVersionPrefix}/transform/to/{Slug(target)}";
         var ext = target is InvoiceFormat.FacturX or InvoiceFormat.Zugferd ? "pdf" : "xml";

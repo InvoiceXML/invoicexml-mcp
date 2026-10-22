@@ -29,9 +29,10 @@ Landing page: `https://www.invoicexml.com/mcp-server`.
 | `validate_xml_invoice` | Check a UBL / CII / XRechnung XML document against EN 16931 and Schematron. |
 | `validate_pdf_invoice` | Check a Factur-X / ZUGFeRD hybrid PDF and the XML embedded inside it. |
 | `render_invoice` | Turn UBL / CII / XRechnung XML into a clean, human-readable PDF preview. |
-| `extract_invoice` | Pull the structured JSON or the embedded CII XML out of a hybrid PDF. |
+| `extract_invoice` | Pull the structured JSON or the embedded CII XML out of a hybrid PDF, or the structured JSON out of a UBL / CII XML. |
 | `embed_invoice` | Combine a PDF and a CII XML into a Factur-X / ZUGFeRD hybrid PDF. |
 | `convert_invoice` | Convert between UBL, CII, XRechnung, Factur-X, and ZUGFeRD. |
+| `transform_invoice` | Turn an ordinary PDF invoice (no embedded XML) into an e-invoice; AI reads the data, so the user must check the result. |
 | `render_validation_report` | Validate an invoice or Order-X order and get the result as a printable PDF report. |
 | `create_order` | Generate an Order-X purchase order (hybrid PDF or Cross-Industry Order XML). |
 | `validate_order` | Check an Order-X PDF or Cross-Industry Order XML. |
@@ -48,6 +49,14 @@ network. For a French domestic UBL or CII invoice, ask the user and pass it if
 they say yes.
 `create_invoice` and `create_order` produce new documents, so they are the tools
 that should require user approval; the others are read-only or transform operations.
+
+`transform_invoice` reads the invoice data out of the PDF with AI. After every
+successful call, tell the user that, and that they must check the result against
+their PDF before the invoice is used or sent. Then offer a preview of what was
+read and let them choose: as a PDF (`render_invoice` on the returned XML; for a
+Factur-X / ZUGFeRD result the returned PDF already shows it, unless
+`preserveOriginalPdf` kept the user's own pages) or in the chat (`extract_invoice`
+with target `json`, which takes the returned XML directly).
 
 ## Supported formats
 

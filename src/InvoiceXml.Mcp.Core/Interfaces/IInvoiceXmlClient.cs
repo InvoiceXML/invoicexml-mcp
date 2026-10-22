@@ -118,9 +118,9 @@ public interface IInvoiceXmlClient
     /// as <c>multipart/form-data</c>. Returns the structured invoice document
     /// (JSON), the embedded EN 16931 CII XML, or the embedded supporting
     /// documents as a ZIP archive, per <paramref name="target"/>. Targets
-    /// <c>json</c> and <c>xml</c> take a hybrid PDF; target <c>attachments</c>
-    /// also accepts a plain CII / UBL invoice XML (the API detects the type
-    /// from <paramref name="contentType"/> and <paramref name="fileName"/>).
+    /// <c>json</c> and <c>attachments</c> take a hybrid PDF or a plain CII / UBL
+    /// invoice XML (the API detects the type from <paramref name="contentType"/>
+    /// and <paramref name="fileName"/>); target <c>xml</c> takes a hybrid PDF.
     /// </summary>
     Task<DocumentArtifact> ExtractAsync(
         ExtractTarget target,
@@ -161,17 +161,21 @@ public interface IInvoiceXmlClient
     /// <summary>
     /// Calls <c>POST /v1/transform/to/{target}</c> with the supplied PDF uploaded as
     /// <c>multipart/form-data</c>. Unlike <see cref="ConvertAsync"/> (a deterministic
-    /// transcode of already-embedded XML), this runs data extraction over the PDF, so
-    /// it also handles a plain (non-hybrid) PDF invoice, and rebuilds it in the target
-    /// format. XML targets (ubl/cii/xrechnung) return XML; hybrid-PDF targets
-    /// (facturx/zugferd) return a PDF/A-3. <paramref name="language"/> sets the
-    /// human-readable PDF face for hybrid targets; <paramref name="buyerReference"/>
-    /// supplies the BT-10 buyer reference required by XRechnung.
+    /// transcode of already-embedded XML), this runs AI data extraction over the PDF,
+    /// so it also handles a plain (non-hybrid) PDF invoice, and rebuilds it in the
+    /// target format. XML targets (ubl/cii/xrechnung) return XML; hybrid-PDF targets
+    /// (facturx/zugferd) return a PDF/A-3. On the hybrid targets
+    /// <paramref name="language"/> words the rendered pages and the XML's default texts
+    /// (null sends <c>auto</c>: the language the invoice is written in, English when
+    /// the renderer lacks it) and <paramref name="preserveOriginalPdf"/> keeps the
+    /// uploaded PDF as the visual layer; <paramref name="buyerReference"/> supplies the
+    /// BT-10 buyer reference required by XRechnung.
     /// </summary>
     Task<DocumentArtifact> TransformAsync(
         InvoiceFormat target,
         byte[] pdf,
-        PdfLanguage language,
+        PdfLanguage? language,
+        bool preserveOriginalPdf,
         string? buyerReference,
         CancellationToken cancellationToken = default);
 }
