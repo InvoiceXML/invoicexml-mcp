@@ -17,6 +17,7 @@ public class ToolSchemaTests
     [InlineData("invoice.paymentDetails.paymentTerms")]
     [InlineData("invoice.notes.subjectCode")]
     [InlineData("invoice.precedingInvoiceReferences.reference")]
+    [InlineData("invoice.contractReference")]
     [InlineData("invoice.supportingDocuments.externalUri")]
     [InlineData("invoice.delivery.deliveryAddress.country")]
     [InlineData("invoice.invoicingPeriod.startDate")]
@@ -40,11 +41,34 @@ public class ToolSchemaTests
     [InlineData("options.logo")]
     [InlineData("options.footerBrand")]
     [InlineData("options.language")]
+    [InlineData("options.validationLanguage")]
+    [InlineData("options.includeQrCode")]
+    [InlineData("invoice.despatchAdviceReference")]
     public void CreateInvoice_SchemaAdvertisesField(string path)
     {
         var schema = InputSchema<CreateInvoiceTool>(nameof(CreateInvoiceTool.CreateInvoiceAsync));
 
         Assert.True(TryResolve(schema, path, out _), $"create_invoice schema does not expose '{path}'.");
+    }
+
+    // Every tool whose API route returns findings lets the agent pick their language.
+    [Theory]
+    [InlineData(typeof(ValidateXmlInvoiceTool), nameof(ValidateXmlInvoiceTool.ValidateXmlAsync), "validationLanguage")]
+    [InlineData(typeof(ValidatePdfInvoiceTool), nameof(ValidatePdfInvoiceTool.ValidatePdfAsync), "validationLanguage")]
+    [InlineData(typeof(ValidateOrderTool), nameof(ValidateOrderTool.ValidateOrderAsync), "validationLanguage")]
+    [InlineData(typeof(RenderValidationReportTool), nameof(RenderValidationReportTool.RenderValidationReportAsync), "validationLanguage")]
+    [InlineData(typeof(EmbedInvoiceTool), nameof(EmbedInvoiceTool.EmbedInvoiceAsync), "validationLanguage")]
+    [InlineData(typeof(ConvertInvoiceTool), nameof(ConvertInvoiceTool.ConvertInvoiceAsync), "validationLanguage")]
+    [InlineData(typeof(TransformInvoiceTool), nameof(TransformInvoiceTool.TransformInvoiceAsync), "validationLanguage")]
+    [InlineData(typeof(CreateInvoiceTool), nameof(CreateInvoiceTool.CreateInvoiceAsync), "options.validationLanguage")]
+    [InlineData(typeof(CreateOrderTool), nameof(CreateOrderTool.CreateOrderAsync), "options.validationLanguage")]
+    public void FindingTools_OfferTheThreeValidationLanguages(Type toolType, string methodName, string path)
+    {
+        var method = toolType.GetMethod(methodName)!;
+        var schema = McpServerTool.Create(method, toolType).ProtocolTool.InputSchema;
+
+        Assert.True(TryResolve(schema, path, out var node), $"{toolType.Name} does not expose '{path}'.");
+        Assert.Equal(["de", "en", "fr"], EnumValues(node).Order().ToArray());
     }
 
     [Fact]

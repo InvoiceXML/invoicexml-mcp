@@ -54,7 +54,7 @@ public class OrderAndAccountToolTests
         var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"valid":true}"""));
         var client = new HttpInvoiceXmlClient(BuildHttp(handler));
 
-        var result = await client.ValidateOrderAsync(Encoding.UTF8.GetBytes(SampleCio), "application/xml", "order.xml", CancellationToken.None);
+        var result = await client.ValidateOrderAsync(Encoding.UTF8.GetBytes(SampleCio), "application/xml", "order.xml", cancellationToken: CancellationToken.None);
 
         Assert.True(result.Valid);
         Assert.Equal("/v1/validate/order-x", handler.LastRequest!.RequestUri!.AbsolutePath);
@@ -70,7 +70,7 @@ public class OrderAndAccountToolTests
 
         await client.ValidationReportPdfAsync(
             ValidationReportFormat.OrderX, SamplePdf, "application/pdf", "order.pdf",
-            rules: null, footerBrand: null, CancellationToken.None);
+            rules: null, footerBrand: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal("/v1/validate/order-x/report", handler.LastRequest!.RequestUri!.AbsolutePath);
     }
@@ -115,7 +115,7 @@ public class OrderAndAccountToolTests
         var client = new CapturingInvoiceXmlClient();
         var tool = new ValidateOrderTool(client, new FakeRemoteFileFetcher([]));
 
-        var result = await tool.ValidateOrderAsync(CancellationToken.None, xml: SampleCio);
+        var result = await tool.ValidateOrderAsync(cancellationToken: CancellationToken.None, xml: SampleCio);
 
         Assert.True(result.Valid);
         Assert.Equal("application/xml", client.LastOrderValidationContentType);
@@ -129,7 +129,7 @@ public class OrderAndAccountToolTests
         var fetcher = new FakeRemoteFileFetcher(SamplePdf);
         var tool = new ValidateOrderTool(client, fetcher);
 
-        await tool.ValidateOrderAsync(CancellationToken.None, pdfUrl: "https://example.test/order.pdf");
+        await tool.ValidateOrderAsync(cancellationToken: CancellationToken.None, pdfUrl: "https://example.test/order.pdf");
 
         Assert.Equal("https://example.test/order.pdf", fetcher.LastUrl);
         Assert.Equal("application/pdf", client.LastOrderValidationContentType);
@@ -143,7 +143,7 @@ public class OrderAndAccountToolTests
         var tool = new ValidateOrderTool(client, new FakeRemoteFileFetcher([]));
 
         var result = await tool.ValidateOrderAsync(
-            CancellationToken.None, xml: SampleCio, pdfBase64: Convert.ToBase64String(SamplePdf));
+            cancellationToken: CancellationToken.None, xml: SampleCio, pdfBase64: Convert.ToBase64String(SamplePdf));
 
         Assert.False(result.Valid);
         Assert.StartsWith("INPUT-", Assert.Single(result.Errors!).Rule);

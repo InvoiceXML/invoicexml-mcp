@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using InvoiceXml.Mcp.Core.Enums;
+using InvoiceXml.Mcp.Core.Tools;
 
 namespace InvoiceXml.Mcp.Core.Models;
 
@@ -17,6 +18,9 @@ public sealed class CreateOrderOptions
 
     [Description("Language of the rendered PDF face: EN (default), DE or FR. Format 'order-x' only.")]
     public PdfLanguage? Language { get; set; }
+
+    [Description(ValidationLanguages.Description + " Independent of 'language', which words the rendered order.")]
+    public ValidationLanguage? ValidationLanguage { get; set; }
 
     [Description("Hex colour '#RRGGBB' applied to headings and accent rules. Format 'order-x' only.")]
     public string? BrandColor { get; set; }

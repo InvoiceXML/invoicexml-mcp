@@ -118,7 +118,10 @@ public sealed class TransformInvoiceTool
         bool preserveOriginalPdf = false,
 
         [Description("For an xrechnung target: the BT-10 buyer reference (Leitweg-ID) required by XRechnung.")]
-        string? buyerReference = null)
+        string? buyerReference = null,
+
+        [Description(ValidationLanguages.ParameterDescription + " Applies to the findings returned when the rebuilt invoice fails validation.")]
+        ValidationLanguage? validationLanguage = null)
     {
         var slug = targetFormat.ToString().ToLowerInvariant();
 
@@ -138,7 +141,7 @@ public sealed class TransformInvoiceTool
 
         return await ArtifactTools.ExecuteAsync(
             slug,
-            () => _client.TransformAsync(targetFormat, bytes!, language, preserveOriginalPdf, buyerReference, cancellationToken),
+            () => _client.TransformAsync(targetFormat, bytes!, language, preserveOriginalPdf, buyerReference, validationLanguage, cancellationToken),
             artifact => targetIsPdf
                 ? $"Transformed the source PDF into a {slug} invoice ({artifact.Content.Length:N0} bytes) as {artifact.FileName}. " +
                   "Delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes. " +

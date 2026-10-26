@@ -40,11 +40,13 @@ public interface IInvoiceXmlClient
     /// Calls <c>POST /v1/validate/order-x</c> with the supplied document uploaded
     /// as <c>multipart/form-data</c>: a hybrid Order-X PDF or the raw CIO XML,
     /// told apart by <paramref name="contentType"/>. Returns the parsed validation result.
+    /// <paramref name="validationLanguage"/> words the findings; omitted when null.
     /// </summary>
     Task<ValidationResult> ValidateOrderAsync(
         byte[] content,
         string contentType,
         string fileName,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -58,23 +60,27 @@ public interface IInvoiceXmlClient
     /// <c>multipart/form-data</c>. Returns the parsed validation result.
     /// <paramref name="rules"/> adds extra national rule sets (one <c>rules</c>
     /// form part each); the API accepts them on <c>ubl</c> and <c>cii</c>.
+    /// <paramref name="validationLanguage"/> words the findings; omitted when null.
     /// </summary>
     Task<ValidationResult> ValidateXmlAsync(
         XmlInvoiceFormat format,
         string xml,
         IReadOnlyList<ExtraRuleset>? rules,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Calls <c>POST /v1/validate/{format}</c> with the supplied PDF uploaded as
     /// <c>multipart/form-data</c>. Returns the parsed validation result.
     /// <paramref name="rules"/> adds extra national rule sets; the API accepts
-    /// them on <c>facturx</c> only.
+    /// them on <c>facturx</c> only. <paramref name="validationLanguage"/> words the
+    /// findings; omitted when null.
     /// </summary>
     Task<ValidationResult> ValidatePdfAsync(
         PdfInvoiceFormat format,
         byte[] pdf,
         IReadOnlyList<ExtraRuleset>? rules,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -87,6 +93,7 @@ public interface IInvoiceXmlClient
     /// a hybrid Order-X PDF or the raw CIO XML on one route). <paramref name="rules"/> adds extra
     /// national rule sets (ubl / cii / facturx); <paramref name="footerBrand"/>
     /// sets the report's footer credit, omitted when null.
+    /// <paramref name="validationLanguage"/> words the whole report; omitted when null.
     /// </summary>
     Task<ValidationReportPdfResult> ValidationReportPdfAsync(
         ValidationReportFormat format,
@@ -95,6 +102,7 @@ public interface IInvoiceXmlClient
         string fileName,
         IReadOnlyList<ExtraRuleset>? rules,
         FooterBrand? footerBrand,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -134,12 +142,14 @@ public interface IInvoiceXmlClient
     /// uploaded as <c>multipart/form-data</c>. Returns a hybrid PDF/A-3 with the
     /// XML embedded (Factur-X or ZUGFeRD). <paramref name="rules"/> adds extra
     /// national rule sets to the pre-embed validation (facturx only).
+    /// <paramref name="validationLanguage"/> words its findings; omitted when null.
     /// </summary>
     Task<DocumentArtifact> EmbedAsync(
         PdfInvoiceFormat format,
         byte[] pdf,
         string ciiXml,
         IReadOnlyList<ExtraRuleset>? rules,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -148,6 +158,8 @@ public interface IInvoiceXmlClient
     /// sources and a hybrid PDF for Factur-X / ZUGFeRD sources; the result is XML or
     /// a hybrid PDF depending on <paramref name="target"/>. <paramref name="footerBrand"/>
     /// only travels on hybrid-PDF targets, where the API renders a PDF face.
+    /// <paramref name="validationLanguage"/> words the findings of a failed
+    /// conversion; omitted when null.
     /// </summary>
     Task<DocumentArtifact> ConvertAsync(
         InvoiceFormat source,
@@ -156,6 +168,7 @@ public interface IInvoiceXmlClient
         string contentType,
         string fileName,
         FooterBrand? footerBrand,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -169,7 +182,8 @@ public interface IInvoiceXmlClient
     /// (null sends <c>auto</c>: the language the invoice is written in, English when
     /// the renderer lacks it) and <paramref name="preserveOriginalPdf"/> keeps the
     /// uploaded PDF as the visual layer; <paramref name="buyerReference"/> supplies the
-    /// BT-10 buyer reference required by XRechnung.
+    /// BT-10 buyer reference required by XRechnung. <paramref name="validationLanguage"/>
+    /// words the findings of a failed transform; omitted when null.
     /// </summary>
     Task<DocumentArtifact> TransformAsync(
         InvoiceFormat target,
@@ -177,5 +191,6 @@ public interface IInvoiceXmlClient
         PdfLanguage? language,
         bool preserveOriginalPdf,
         string? buyerReference,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default);
 }

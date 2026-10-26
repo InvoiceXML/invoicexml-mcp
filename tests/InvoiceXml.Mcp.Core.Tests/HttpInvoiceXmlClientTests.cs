@@ -68,7 +68,7 @@ public class HttpInvoiceXmlClientTests
             XmlInvoiceFormat.XRechnung,
             "<Invoice/>",
             rules: null,
-            CancellationToken.None);
+            cancellationToken: CancellationToken.None);
 
         Assert.Equal("/v1/validate/xrechnung", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.StartsWith("multipart/form-data", handler.LastRequest.Content!.Headers.ContentType!.MediaType);
@@ -160,6 +160,7 @@ public class HttpInvoiceXmlClientTests
         {
             InvoiceNumber = "11",
             Currency = "EUR",
+            ContractReference = "CT-26525",
             Notes = [new InvoiceNote { Note = "Recovery costs apply.", SubjectCode = "PMT" }],
             PrecedingInvoiceReferences = [new PrecedingInvoiceReference { Reference = "INV-1", IssueDate = new DateOnly(2026, 9, 1) }],
             Seller = new SellerParty
@@ -203,6 +204,7 @@ public class HttpInvoiceXmlClientTests
         var doc = body.RootElement.GetProperty("invoice");
 
         // Every path below is the API InvoiceDocument's camelCase wire name.
+        Assert.Equal("CT-26525", doc.GetProperty("contractReference").GetString());
         Assert.Equal("PMT", doc.GetProperty("notes")[0].GetProperty("subjectCode").GetString());
         Assert.Equal("Recovery costs apply.", doc.GetProperty("notes")[0].GetProperty("note").GetString());
         Assert.Equal("2026-09-01", doc.GetProperty("precedingInvoiceReferences")[0].GetProperty("issueDate").GetString());
@@ -250,6 +252,71 @@ public class HttpInvoiceXmlClientTests
             CancellationToken.None);
 
         Assert.Contains("\"includeAdvancedProperties\":true", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task CreateInvoiceAsync_SerializesQrCodeValidationLanguageAndDespatchAdvice()
+    {
+        var pdf = new byte[] { 0x25, 0x50, 0x44, 0x46 };
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, pdf, "application/pdf", "invoice-zugferd.pdf"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        await client.CreateInvoiceAsync(
+            InvoiceFormat.Zugferd,
+            new InvoiceDocument { InvoiceNumber = "9", Currency = "EUR", DespatchAdviceReference = "DN-2026-0871" },
+            new CreateInvoiceOptions { IncludeQrCode = true, ValidationLanguage = ValidationLanguage.DE },
+            CancellationToken.None);
+
+        Assert.Contains("\"includeQrCode\":true", handler.LastRequestBody);
+        Assert.Contains("\"validationLanguage\":\"de\"", handler.LastRequestBody);
+        Assert.Contains("\"despatchAdviceReference\":\"DN-2026-0871\"", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task CreateOrderAsync_SerializesValidationLanguage()
+    {
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, "<x/>"u8.ToArray(), "application/xml", "order-cio.xml"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        await client.CreateOrderAsync(
+            OrderFormat.Cio,
+            new InvoiceDocument { InvoiceNumber = "PO-1", Currency = "EUR" },
+            new CreateOrderOptions { ValidationLanguage = ValidationLanguage.FR },
+            CancellationToken.None);
+
+        Assert.Contains("\"validationLanguage\":\"fr\"", handler.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task ValidateXmlAsync_SendsValidationLanguageOnlyWhenSet()
+    {
+        var german = new StubHttpMessageHandler(StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"valid":true}"""));
+        await new HttpInvoiceXmlClient(BuildClient(german)).ValidateXmlAsync(
+            XmlInvoiceFormat.Ubl, "<x/>", rules: null, ValidationLanguage.DE, CancellationToken.None);
+        Assert.Contains("name=validationLanguage", german.LastRequestBody);
+        Assert.Contains("\r\nde\r\n", german.LastRequestBody);
+
+        var unset = new StubHttpMessageHandler(StubHttpMessageHandler.Json(HttpStatusCode.OK, """{"valid":true}"""));
+        await new HttpInvoiceXmlClient(BuildClient(unset)).ValidateXmlAsync(
+            XmlInvoiceFormat.Ubl, "<x/>", rules: null, cancellationToken: CancellationToken.None);
+        Assert.DoesNotContain("validationLanguage", unset.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task ValidationReportPdfAsync_SendsValidationLanguage()
+    {
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, [0x25, 0x50, 0x44, 0x46], "application/pdf", "validation-report-cii.pdf"));
+        var client = new HttpInvoiceXmlClient(BuildClient(handler));
+
+        await client.ValidationReportPdfAsync(
+            ValidationReportFormat.Cii, "<x/>"u8.ToArray(), "application/xml", "invoice.xml",
+            rules: null, footerBrand: null, ValidationLanguage.FR, CancellationToken.None);
+
+        Assert.Contains("name=validationLanguage", handler.LastRequestBody);
+        Assert.Contains("\r\nfr\r\n", handler.LastRequestBody);
     }
 
     [Fact]
@@ -307,7 +374,7 @@ public class HttpInvoiceXmlClientTests
         var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Json(HttpStatusCode.OK, json));
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
-        var result = await client.ValidateXmlAsync(XmlInvoiceFormat.Ubl, "<Invoice/>", rules: null, CancellationToken.None);
+        var result = await client.ValidateXmlAsync(XmlInvoiceFormat.Ubl, "<Invoice/>", rules: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal("peppol-bis-3", result.Data?.Profile);
         Assert.Contains("poacc:billing:3.0", result.Data?.CustomizationId);
@@ -323,7 +390,7 @@ public class HttpInvoiceXmlClientTests
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
         await Assert.ThrowsAsync<ArgumentException>(() => client.ValidatePdfAsync(
-            PdfInvoiceFormat.Zugferd, Array.Empty<byte>(), rules: null, CancellationToken.None));
+            PdfInvoiceFormat.Zugferd, Array.Empty<byte>(), rules: null, cancellationToken: CancellationToken.None));
     }
 
     [Fact]
@@ -390,7 +457,7 @@ public class HttpInvoiceXmlClientTests
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
         await client.ValidateXmlAsync(
-            XmlInvoiceFormat.Cii, "<x/>", [ExtraRuleset.BrFr, ExtraRuleset.BrFr], CancellationToken.None);
+            XmlInvoiceFormat.Cii, "<x/>", [ExtraRuleset.BrFr, ExtraRuleset.BrFr], cancellationToken: CancellationToken.None);
 
         // Duplicates collapse to one part; the API binds 'rules' as a string array.
         var body = handler.LastRequestBody!;
@@ -405,14 +472,14 @@ public class HttpInvoiceXmlClientTests
             HttpStatusCode.OK, [0x25, 0x50, 0x44, 0x46], "application/pdf", "invoice-facturx.pdf"));
         await new HttpInvoiceXmlClient(BuildClient(pdfHandler)).ConvertAsync(
             InvoiceFormat.Ubl, InvoiceFormat.FacturX, "<Invoice/>"u8.ToArray(), "application/xml", "invoice.xml",
-            FooterBrand.None, CancellationToken.None);
+            FooterBrand.None, cancellationToken: CancellationToken.None);
         Assert.Contains("name=footerBrand", pdfHandler.LastRequestBody);
 
         var xmlHandler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
             HttpStatusCode.OK, "<x/>"u8.ToArray(), "application/xml", "invoice-cii.xml"));
         await new HttpInvoiceXmlClient(BuildClient(xmlHandler)).ConvertAsync(
             InvoiceFormat.Ubl, InvoiceFormat.Cii, "<Invoice/>"u8.ToArray(), "application/xml", "invoice.xml",
-            FooterBrand.None, CancellationToken.None);
+            FooterBrand.None, cancellationToken: CancellationToken.None);
         Assert.DoesNotContain("footerBrand", xmlHandler.LastRequestBody);
     }
 
@@ -424,7 +491,7 @@ public class HttpInvoiceXmlClientTests
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
         var result = await client.TransformAsync(
-            InvoiceFormat.Zugferd, [0x25, 0x50, 0x44, 0x46], language: null, preserveOriginalPdf: false, buyerReference: null, CancellationToken.None);
+            InvoiceFormat.Zugferd, [0x25, 0x50, 0x44, 0x46], language: null, preserveOriginalPdf: false, buyerReference: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal("/v1/transform/to/zugferd", handler.LastRequest!.RequestUri!.AbsolutePath);
         var body = handler.LastRequestBody!;
@@ -442,7 +509,7 @@ public class HttpInvoiceXmlClientTests
             HttpStatusCode.OK, [0x25, 0x50, 0x44, 0x46], "application/pdf", "invoice-facturx.pdf"));
 
         await new HttpInvoiceXmlClient(BuildClient(handler)).TransformAsync(
-            InvoiceFormat.FacturX, [0x25, 0x50, 0x44, 0x46], PdfLanguage.FR, preserveOriginalPdf: true, buyerReference: null, CancellationToken.None);
+            InvoiceFormat.FacturX, [0x25, 0x50, 0x44, 0x46], PdfLanguage.FR, preserveOriginalPdf: true, buyerReference: null, cancellationToken: CancellationToken.None);
 
         var body = handler.LastRequestBody!;
         Assert.Contains("name=language", body);
@@ -458,7 +525,7 @@ public class HttpInvoiceXmlClientTests
         var xrechnung = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
             HttpStatusCode.OK, "<x/>"u8.ToArray(), "application/xml", "invoice-xrechnung.xml"));
         await new HttpInvoiceXmlClient(BuildClient(xrechnung)).TransformAsync(
-            InvoiceFormat.XRechnung, [0x25, 0x50, 0x44, 0x46], PdfLanguage.DE, preserveOriginalPdf: true, buyerReference: "04011000-12345-67", CancellationToken.None);
+            InvoiceFormat.XRechnung, [0x25, 0x50, 0x44, 0x46], PdfLanguage.DE, preserveOriginalPdf: true, buyerReference: "04011000-12345-67", cancellationToken: CancellationToken.None);
         Assert.Contains("name=buyerReference", xrechnung.LastRequestBody);
         Assert.Contains("04011000-12345-67", xrechnung.LastRequestBody);
         Assert.DoesNotContain("name=language", xrechnung.LastRequestBody);
@@ -467,7 +534,7 @@ public class HttpInvoiceXmlClientTests
         var ubl = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
             HttpStatusCode.OK, "<x/>"u8.ToArray(), "application/xml", "invoice-ubl.xml"));
         await new HttpInvoiceXmlClient(BuildClient(ubl)).TransformAsync(
-            InvoiceFormat.Ubl, [0x25, 0x50, 0x44, 0x46], language: null, preserveOriginalPdf: false, buyerReference: null, CancellationToken.None);
+            InvoiceFormat.Ubl, [0x25, 0x50, 0x44, 0x46], language: null, preserveOriginalPdf: false, buyerReference: null, cancellationToken: CancellationToken.None);
         Assert.DoesNotContain("name=language", ubl.LastRequestBody);
         Assert.DoesNotContain("buyerReference", ubl.LastRequestBody);
     }
@@ -551,7 +618,7 @@ public class HttpInvoiceXmlClientTests
             "invoice.xml",
             rules: null,
             footerBrand: null,
-            CancellationToken.None);
+            cancellationToken: CancellationToken.None);
 
         Assert.Equal("/v1/validate/xrechnung/report", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.StartsWith("multipart/form-data", handler.LastRequest.Content!.Headers.ContentType!.MediaType);
@@ -569,7 +636,7 @@ public class HttpInvoiceXmlClientTests
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
         var result = await client.ValidationReportPdfAsync(
-            ValidationReportFormat.FacturX, pdf, "application/pdf", "invoice.pdf", rules: null, footerBrand: null, CancellationToken.None);
+            ValidationReportFormat.FacturX, pdf, "application/pdf", "invoice.pdf", rules: null, footerBrand: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal("/v1/validate/facturx/report", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.Null(result.Valid);
@@ -584,7 +651,7 @@ public class HttpInvoiceXmlClientTests
             HttpStatusCode.OK, pdf, "application/pdf", "invoice-facturx.pdf"));
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
-        await client.EmbedAsync(PdfInvoiceFormat.FacturX, pdf, "<CrossIndustryInvoice/>", rules: null, CancellationToken.None);
+        await client.EmbedAsync(PdfInvoiceFormat.FacturX, pdf, "<CrossIndustryInvoice/>", rules: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal("/v1/embed/facturx", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.StartsWith("multipart/form-data", handler.LastRequest.Content!.Headers.ContentType!.MediaType);
@@ -602,7 +669,7 @@ public class HttpInvoiceXmlClientTests
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
         var result = await client.ConvertAsync(
-            InvoiceFormat.Cii, InvoiceFormat.Ubl, xml, "application/xml", "invoice.xml", footerBrand: null, CancellationToken.None);
+            InvoiceFormat.Cii, InvoiceFormat.Ubl, xml, "application/xml", "invoice.xml", footerBrand: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal("/v1/convert/cii/to/ubl", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.StartsWith("multipart/form-data", handler.LastRequest.Content!.Headers.ContentType!.MediaType);
@@ -619,7 +686,7 @@ public class HttpInvoiceXmlClientTests
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
         var ex = await Assert.ThrowsAsync<InvoiceXmlApiException>(() =>
-            client.ValidateXmlAsync(XmlInvoiceFormat.Ubl, "<x/>", rules: null, CancellationToken.None));
+            client.ValidateXmlAsync(XmlInvoiceFormat.Ubl, "<x/>", rules: null, cancellationToken: CancellationToken.None));
 
         Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
         Assert.Contains("Invalid or inactive API key", ex.ResponseBody);

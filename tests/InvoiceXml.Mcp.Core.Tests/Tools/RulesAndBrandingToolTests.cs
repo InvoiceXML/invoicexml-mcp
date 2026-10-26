@@ -70,6 +70,18 @@ public class RulesAndBrandingToolTests
     }
 
     [Fact]
+    public async Task ValidateXml_ForwardsValidationLanguage()
+    {
+        var client = new CapturingInvoiceXmlClient();
+        var tool = new ValidateXmlInvoiceTool(client, new FakeRemoteFileFetcher([]));
+
+        await tool.ValidateXmlAsync(XmlInvoiceFormat.Ubl, CancellationToken.None, xml: SampleUbl,
+            validationLanguage: ValidationLanguage.FR);
+
+        Assert.Equal(ValidationLanguage.FR, client.LastValidationLanguage);
+    }
+
+    [Fact]
     public async Task ValidateXml_RefusesRulesOnXRechnungWithoutCallingTheApi()
     {
         var client = new CapturingInvoiceXmlClient();

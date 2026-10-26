@@ -63,7 +63,10 @@ public sealed class EmbedInvoiceTool
         string? xmlUrl = null,
 
         [Description(ExtraRules.ParameterDescription + " Format 'facturx' only.")]
-        List<ExtraRuleset>? rules = null)
+        List<ExtraRuleset>? rules = null,
+
+        [Description(ValidationLanguages.ParameterDescription + " Applies to the findings returned when the XML fails validation.")]
+        ValidationLanguage? validationLanguage = null)
     {
         var slug = format.ToString().ToLowerInvariant();
 
@@ -138,7 +141,7 @@ public sealed class EmbedInvoiceTool
 
         return await ArtifactTools.ExecuteAsync(
             slug,
-            () => _client.EmbedAsync(format, pdfBytes, ciiXml, rules, cancellationToken),
+            () => _client.EmbedAsync(format, pdfBytes, ciiXml, rules, validationLanguage, cancellationToken),
             artifact =>
                 $"Embedded the CII XML into a {slug} hybrid PDF/A-3 ({artifact.Content.Length:N0} bytes) as {artifact.FileName}. " +
                 "Delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes.",

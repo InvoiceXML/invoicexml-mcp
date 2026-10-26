@@ -81,6 +81,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         byte[] content,
         string contentType,
         string fileName,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -89,7 +90,8 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
 
-        return ValidateAsync(EnumWire.Slug(ValidationReportFormat.OrderX), content, contentType, fileName, rules: null, cancellationToken);
+        return ValidateAsync(EnumWire.Slug(ValidationReportFormat.OrderX), content, contentType, fileName, rules: null,
+            validationLanguage, cancellationToken);
     }
 
     public async Task<AccountInfo> GetAccountAsync(CancellationToken cancellationToken = default)
@@ -109,25 +111,27 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         XmlInvoiceFormat format,
         string xml,
         IReadOnlyList<ExtraRuleset>? rules,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(xml);
 
         var xmlBytes = System.Text.Encoding.UTF8.GetBytes(xml);
-        return ValidateAsync(Slug(format), xmlBytes, "application/xml", "invoice.xml", rules, cancellationToken);
+        return ValidateAsync(Slug(format), xmlBytes, "application/xml", "invoice.xml", rules, validationLanguage, cancellationToken);
     }
 
     public Task<ValidationResult> ValidatePdfAsync(
         PdfInvoiceFormat format,
         byte[] pdf,
         IReadOnlyList<ExtraRuleset>? rules,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pdf);
         if (pdf.Length == 0)
             throw new ArgumentException("PDF bytes must not be empty.", nameof(pdf));
 
-        return ValidateAsync(Slug(format), pdf, "application/pdf", "invoice.pdf", rules, cancellationToken);
+        return ValidateAsync(Slug(format), pdf, "application/pdf", "invoice.pdf", rules, validationLanguage, cancellationToken);
     }
 
     private async Task<ValidationResult> ValidateAsync(
@@ -136,6 +140,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         string contentType,
         string fileName,
         IReadOnlyList<ExtraRuleset>? rules,
+        ValidationLanguage? validationLanguage,
         CancellationToken cancellationToken)
     {
         using var form = new MultipartFormDataContent();
@@ -143,6 +148,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         form.Add(fileContent, "file", fileName);
         AddRules(form, rules);
+        AddValidationLanguage(form, validationLanguage);
 
         var path = $"{ApiVersionPrefix}/validate/{slug}";
         using var response = await _http.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
@@ -163,6 +169,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         string fileName,
         IReadOnlyList<ExtraRuleset>? rules,
         FooterBrand? footerBrand,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -175,6 +182,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         form.Add(FilePart(content, contentType), "file", fileName);
         AddRules(form, rules);
         AddFooterBrand(form, footerBrand);
+        AddValidationLanguage(form, validationLanguage);
 
         var path = $"{ApiVersionPrefix}/validate/{EnumWire.Slug(format)}/report";
         using var response = await _http.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
@@ -259,6 +267,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         byte[] pdf,
         string ciiXml,
         IReadOnlyList<ExtraRuleset>? rules,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pdf);
@@ -270,6 +279,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         form.Add(FilePart(pdf, "application/pdf"), "pdf", "invoice.pdf");
         form.Add(FilePart(System.Text.Encoding.UTF8.GetBytes(ciiXml), "application/xml"), "xml", "invoice.xml");
         AddRules(form, rules);
+        AddValidationLanguage(form, validationLanguage);
 
         var path = $"{ApiVersionPrefix}/embed/{Slug(format)}";
         return SendForArtifactAsync(path, form, $"invoice-{Slug(format)}.pdf", cancellationToken);
@@ -282,6 +292,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         string contentType,
         string fileName,
         FooterBrand? footerBrand,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -292,6 +303,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
 
         var form = new MultipartFormDataContent();
         form.Add(FilePart(content, contentType), "file", fileName);
+        AddValidationLanguage(form, validationLanguage);
 
         // Only the render-and-embed promotions (XML to a hybrid PDF) print a footer.
         var ext = target is InvoiceFormat.FacturX or InvoiceFormat.Zugferd ? "pdf" : "xml";
@@ -311,6 +323,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         PdfLanguage? language,
         bool preserveOriginalPdf,
         string? buyerReference,
+        ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pdf);
@@ -319,6 +332,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
 
         var form = new MultipartFormDataContent();
         form.Add(FilePart(pdf, "application/pdf"), "file", "invoice.pdf");
+        AddValidationLanguage(form, validationLanguage);
 
         // The XRechnung route needs an explicit buyer reference (BT-10); the hybrid-PDF
         // routes take a language for the pages and the XML's default texts (auto lets the
@@ -354,6 +368,13 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
     {
         if (footerBrand is { } brand)
             form.Add(new StringContent(EnumWire.Slug(brand)), "footerBrand");
+    }
+
+    // Omitted when unset so the API's own default (English) stays in charge.
+    private static void AddValidationLanguage(MultipartFormDataContent form, ValidationLanguage? validationLanguage)
+    {
+        if (validationLanguage is { } language)
+            form.Add(new StringContent(EnumWire.Slug(language)), "validationLanguage");
     }
 
     private static ByteArrayContent FilePart(byte[] bytes, string contentType)

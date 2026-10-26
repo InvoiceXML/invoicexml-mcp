@@ -69,7 +69,10 @@ public sealed class ValidatePdfInvoiceTool
         string? pdfBase64 = null,
 
         [Description(ExtraRules.ParameterDescription + " Format 'facturx' only.")]
-        List<ExtraRuleset>? rules = null)
+        List<ExtraRuleset>? rules = null,
+
+        [Description(ValidationLanguages.ParameterDescription)]
+        ValidationLanguage? validationLanguage = null)
     {
         var rulesError = ExtraRules.Unsupported(rules, format.ToString().ToLowerInvariant(), "facturx");
         if (rulesError is not null)
@@ -123,7 +126,7 @@ public sealed class ValidatePdfInvoiceTool
 
         try
         {
-            return await _client.ValidatePdfAsync(format, bytes, rules, cancellationToken).ConfigureAwait(false);
+            return await _client.ValidatePdfAsync(format, bytes, rules, validationLanguage, cancellationToken).ConfigureAwait(false);
         }
         catch (InvoiceXmlApiException ex)
         {

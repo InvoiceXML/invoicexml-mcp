@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using InvoiceXml.Mcp.Core.Enums;
 using InvoiceXml.Mcp.Core.Interfaces;
 using InvoiceXml.Mcp.Core.Models;
 using InvoiceXml.Mcp.Core.Services;
@@ -54,7 +55,10 @@ public sealed class ValidateOrderTool
         string? xmlUrl = null,
 
         [Description("A Cross-Industry Order XML as plain text. Provide exactly one input.")]
-        string? xml = null)
+        string? xml = null,
+
+        [Description(ValidationLanguages.ParameterDescription)]
+        ValidationLanguage? validationLanguage = null)
     {
         var exclusive = FileInputResolver.ValidateExactlyOne(
         [
@@ -132,7 +136,7 @@ public sealed class ValidateOrderTool
 
         try
         {
-            return await _client.ValidateOrderAsync(content, contentType, fileName, cancellationToken).ConfigureAwait(false);
+            return await _client.ValidateOrderAsync(content, contentType, fileName, validationLanguage, cancellationToken).ConfigureAwait(false);
         }
         catch (InvoiceXmlApiException ex)
         {

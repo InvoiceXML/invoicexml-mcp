@@ -67,6 +67,7 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     public FooterBrand? LastFooterBrand { get; private set; }
     public string? LastLogoUrl { get; private set; }
     public string? LastLogo { get; private set; }
+    public ValidationLanguage? LastValidationLanguage { get; private set; }
 
     public OrderFormat? LastOrderFormat { get; private set; }
     public InvoiceDocument? LastOrder { get; private set; }
@@ -110,8 +111,9 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<ValidationResult> ValidateOrderAsync(
-        byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
+        byte[] content, string contentType, string fileName, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
     {
+        LastValidationLanguage = validationLanguage;
         LastOrderValidationContent = content;
         LastOrderValidationContentType = contentType;
         return Task.FromResult(_result);
@@ -121,8 +123,9 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
         => Task.FromResult(Account);
 
     public Task<ValidationResult> ValidateXmlAsync(
-        XmlInvoiceFormat format, string xml, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
+        XmlInvoiceFormat format, string xml, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
     {
+        LastValidationLanguage = validationLanguage;
         LastRules = rules;
         LastXmlFormat = format;
         LastXml = xml;
@@ -130,8 +133,9 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<ValidationResult> ValidatePdfAsync(
-        PdfInvoiceFormat format, byte[] pdf, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
+        PdfInvoiceFormat format, byte[] pdf, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
     {
+        LastValidationLanguage = validationLanguage;
         LastRules = rules;
         LastPdfFormat = format;
         LastPdfBytes = pdf;
@@ -139,8 +143,9 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<ValidationReportPdfResult> ValidationReportPdfAsync(
-        ValidationReportFormat format, byte[] content, string contentType, string fileName, IReadOnlyList<ExtraRuleset>? rules, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
+        ValidationReportFormat format, byte[] content, string contentType, string fileName, IReadOnlyList<ExtraRuleset>? rules, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
     {
+        LastValidationLanguage = validationLanguage;
         LastRules = rules;
         LastFooterBrand = footerBrand;
         LastReportFormat = format;
@@ -173,8 +178,9 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<DocumentArtifact> EmbedAsync(
-        PdfInvoiceFormat format, byte[] pdf, string ciiXml, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
+        PdfInvoiceFormat format, byte[] pdf, string ciiXml, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
     {
+        LastValidationLanguage = validationLanguage;
         LastRules = rules;
         LastEmbedFormat = format;
         LastEmbedPdf = pdf;
@@ -183,8 +189,9 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<DocumentArtifact> ConvertAsync(
-        InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
+        InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
     {
+        LastValidationLanguage = validationLanguage;
         LastFooterBrand = footerBrand;
         LastConvertSource = source;
         LastConvertTarget = target;
@@ -194,8 +201,9 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<DocumentArtifact> TransformAsync(
-        InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, string? buyerReference, CancellationToken cancellationToken = default)
+        InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, string? buyerReference, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
     {
+        LastValidationLanguage = validationLanguage;
         LastTransformTarget = target;
         LastTransformPdf = pdf;
         LastTransformLanguage = language;

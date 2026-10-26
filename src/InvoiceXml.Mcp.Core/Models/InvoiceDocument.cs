@@ -59,8 +59,14 @@ public sealed class InvoiceDocument
     [Description("Buyer reference (BT-10). Carries the Leitweg-ID in XRechnung, where it is required. Optional otherwise.")]
     public string? BuyerReference { get; set; }
 
+    [Description("Contract reference (BT-12): the number of the contract the invoice is issued under. Optional.")]
+    public string? ContractReference { get; set; }
+
     [Description("Purchase order reference (BT-13). Optional.")]
     public string? PurchaseOrderReference { get; set; }
+
+    [Description("Despatch advice reference (BT-16): the delivery note number of the shipment the invoice covers. Optional.")]
+    public string? DespatchAdviceReference { get; set; }
 
     [Description("Invoice notes (BG-1): free text (BT-22) with an optional subject code (BT-21). Optional.")]
     public List<InvoiceNote>? Notes { get; set; }

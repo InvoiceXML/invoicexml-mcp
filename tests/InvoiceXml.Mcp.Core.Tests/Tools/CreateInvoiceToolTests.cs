@@ -172,22 +172,22 @@ public class CreateInvoiceToolTests
             => throw new NotImplementedException();
 
         public Task<ValidationResult> ValidateOrderAsync(
-            byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
+            byte[] content, string contentType, string fileName, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<AccountInfo> GetAccountAsync(CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<ValidationResult> ValidateXmlAsync(
-            XmlInvoiceFormat format, string xml, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
+            XmlInvoiceFormat format, string xml, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<ValidationResult> ValidatePdfAsync(
-            PdfInvoiceFormat format, byte[] pdf, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
+            PdfInvoiceFormat format, byte[] pdf, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<ValidationReportPdfResult> ValidationReportPdfAsync(
-            ValidationReportFormat format, byte[] content, string contentType, string fileName, IReadOnlyList<ExtraRuleset>? rules, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
+            ValidationReportFormat format, byte[] content, string contentType, string fileName, IReadOnlyList<ExtraRuleset>? rules, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<DocumentArtifact> RenderToPdfAsync(
@@ -199,15 +199,15 @@ public class CreateInvoiceToolTests
             => throw new NotImplementedException();
 
         public Task<DocumentArtifact> EmbedAsync(
-            PdfInvoiceFormat format, byte[] pdf, string ciiXml, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
+            PdfInvoiceFormat format, byte[] pdf, string ciiXml, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<DocumentArtifact> ConvertAsync(
-            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
+            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<DocumentArtifact> TransformAsync(
-            InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, string? buyerReference, CancellationToken cancellationToken = default)
+            InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, string? buyerReference, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
     }
 
@@ -223,22 +223,22 @@ public class CreateInvoiceToolTests
             => Task.FromException<DocumentArtifact>(ex);
 
         public Task<ValidationResult> ValidateOrderAsync(
-            byte[] content, string contentType, string fileName, CancellationToken cancellationToken = default)
+            byte[] content, string contentType, string fileName, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => Task.FromException<ValidationResult>(ex);
 
         public Task<AccountInfo> GetAccountAsync(CancellationToken cancellationToken = default)
             => Task.FromException<AccountInfo>(ex);
 
         public Task<ValidationResult> ValidateXmlAsync(
-            XmlInvoiceFormat format, string xml, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
+            XmlInvoiceFormat format, string xml, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => Task.FromException<ValidationResult>(ex);
 
         public Task<ValidationResult> ValidatePdfAsync(
-            PdfInvoiceFormat format, byte[] pdf, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
+            PdfInvoiceFormat format, byte[] pdf, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => Task.FromException<ValidationResult>(ex);
 
         public Task<ValidationReportPdfResult> ValidationReportPdfAsync(
-            ValidationReportFormat format, byte[] content, string contentType, string fileName, IReadOnlyList<ExtraRuleset>? rules, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
+            ValidationReportFormat format, byte[] content, string contentType, string fileName, IReadOnlyList<ExtraRuleset>? rules, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => Task.FromException<ValidationReportPdfResult>(ex);
 
         public Task<DocumentArtifact> RenderToPdfAsync(
@@ -250,15 +250,15 @@ public class CreateInvoiceToolTests
             => Task.FromException<DocumentArtifact>(ex);
 
         public Task<DocumentArtifact> EmbedAsync(
-            PdfInvoiceFormat format, byte[] pdf, string ciiXml, IReadOnlyList<ExtraRuleset>? rules, CancellationToken cancellationToken = default)
+            PdfInvoiceFormat format, byte[] pdf, string ciiXml, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => Task.FromException<DocumentArtifact>(ex);
 
         public Task<DocumentArtifact> ConvertAsync(
-            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, CancellationToken cancellationToken = default)
+            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => Task.FromException<DocumentArtifact>(ex);
 
         public Task<DocumentArtifact> TransformAsync(
-            InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, string? buyerReference, CancellationToken cancellationToken = default)
+            InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, string? buyerReference, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => Task.FromException<DocumentArtifact>(ex);
     }
 }

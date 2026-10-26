@@ -70,7 +70,10 @@ public sealed class ValidateXmlInvoiceTool
         string? xmlUrl = null,
 
         [Description(ExtraRules.ParameterDescription + " Formats 'ubl' and 'cii' only.")]
-        List<ExtraRuleset>? rules = null)
+        List<ExtraRuleset>? rules = null,
+
+        [Description(ValidationLanguages.ParameterDescription)]
+        ValidationLanguage? validationLanguage = null)
     {
         var rulesError = ExtraRules.Unsupported(rules, format.ToString().ToLowerInvariant(), "ubl", "cii");
         if (rulesError is not null)
@@ -102,7 +105,7 @@ public sealed class ValidateXmlInvoiceTool
 
         try
         {
-            return await _client.ValidateXmlAsync(format, xmlText, rules, cancellationToken).ConfigureAwait(false);
+            return await _client.ValidateXmlAsync(format, xmlText, rules, validationLanguage, cancellationToken).ConfigureAwait(false);
         }
         catch (InvoiceXmlApiException ex)
         {

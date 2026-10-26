@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using InvoiceXml.Mcp.Core.Enums;
+using InvoiceXml.Mcp.Core.Tools;
 
 namespace InvoiceXml.Mcp.Core.Models;
 
@@ -18,6 +19,9 @@ public sealed class CreateInvoiceOptions
         "On the hybrid PDF formats (facturx, zugferd) it also localises the labels and dates of the PDF face. " +
         "Text you supply always wins.")]
     public PdfLanguage? Language { get; set; }
+
+    [Description(ValidationLanguages.Description + " Independent of 'language', which words the invoice itself.")]
+    public ValidationLanguage? ValidationLanguage { get; set; }
 
     [Description("Hex colour '#RRGGBB' applied to headings and accent rules (e.g. '#1F4E79'). Hybrid PDF formats only. Optional.")]
     public string? BrandColor { get; set; }
@@ -72,6 +76,15 @@ public sealed class CreateInvoiceOptions
         "formats ('facturx', 'zugferd') with the built-in template only; has no effect when 'pdfUrl' supplies the " +
         "visual layer.")]
     public bool? IncludeAdvancedProperties { get; set; }
+
+    [Description(
+        "When true, the payment section of the rendered PDF face carries a payment QR code (EPC QR code, known " +
+        "in Germany as GiroCode) that banking apps turn into a pre-filled SEPA credit transfer. It prints only " +
+        "when the invoice is in EUR, paymentDetails.paymentAccountIdentifier is a valid IBAN, the payment means " +
+        "code is a credit transfer ('30', '42' or '58') and money is due; credit notes and self-billed invoices " +
+        "never carry one. Default false. Formats 'facturx' and 'zugferd' with the built-in template only; " +
+        "ignored when 'pdfUrl' is set.")]
+    public bool? IncludeQrCode { get; set; }
 
     [Description(
         "Footer credit on the rendered PDF face: 'invoicexml' (default) or 'none' to omit it. Formats 'facturx' " +

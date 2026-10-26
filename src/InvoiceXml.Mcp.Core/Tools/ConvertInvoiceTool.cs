@@ -100,7 +100,10 @@ public sealed class ConvertInvoiceTool
         [Description(
             "Footer credit of the rendered PDF face: 'invoicexml' (default) or 'none' to omit it. Only used when an " +
             "XML source is converted to facturx / zugferd; ignored for every other conversion.")]
-        FooterBrand? footerBrand = null)
+        FooterBrand? footerBrand = null,
+
+        [Description(ValidationLanguages.ParameterDescription + " Applies to the findings returned when the converted invoice fails validation.")]
+        ValidationLanguage? validationLanguage = null)
     {
         var sourceSlug = sourceFormat.ToString().ToLowerInvariant();
         var targetSlug = targetFormat.ToString().ToLowerInvariant();
@@ -213,7 +216,7 @@ public sealed class ConvertInvoiceTool
 
         return await ArtifactTools.ExecuteAsync(
             slug,
-            () => _client.ConvertAsync(sourceFormat, targetFormat, content, contentType, fileName, footerBrand, cancellationToken),
+            () => _client.ConvertAsync(sourceFormat, targetFormat, content, contentType, fileName, footerBrand, validationLanguage, cancellationToken),
             artifact => targetIsPdf
                 ? $"Converted {sourceSlug} to {targetSlug} ({artifact.Content.Length:N0} bytes) as {artifact.FileName}. " +
                   "Delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes."

@@ -79,7 +79,13 @@ public sealed class RenderValidationReportTool
         List<ExtraRuleset>? rules = null,
 
         [Description("Footer credit of the report PDF: 'invoicexml' (default) or 'none' to omit it.")]
-        FooterBrand? footerBrand = null)
+        FooterBrand? footerBrand = null,
+
+        [Description(
+            "Optional. Language of the report: 'en' (default), 'de' or 'fr'. Words the whole PDF, its headings, " +
+            "business-term names and findings; rule ids and BT codes stay the same. Set 'de' or 'fr' when the " +
+            "user writes in German or French; leave it out otherwise.")]
+        ValidationLanguage? validationLanguage = null)
     {
         var slug = EnumWire.Slug(format);
         // Order-X is the one route that takes both shapes: a hybrid PDF or the raw CIO XML.
@@ -191,7 +197,7 @@ public sealed class RenderValidationReportTool
             async () =>
             {
                 outcome = await _client
-                    .ValidationReportPdfAsync(format, content, contentType, fileName, rules, footerBrand, cancellationToken)
+                    .ValidationReportPdfAsync(format, content, contentType, fileName, rules, footerBrand, validationLanguage, cancellationToken)
                     .ConfigureAwait(false);
                 return outcome.Report;
             },
