@@ -22,7 +22,7 @@ public sealed class InvoiceLine
     [Description("Quantity of the item being invoiced. Required.")]
     public decimal? Quantity { get; set; }
 
-    [Description("UN/ECE Recommendation 20 unit code (BT-130), e.g. 'EA' (each), 'HUR' (hour), 'DAY' (day). Defaults to C62 (one) server-side if omitted.")]
+    [Description("UN/ECE Recommendation 20 unit code (BT-130), e.g. 'H87' (piece), 'HUR' (hour), 'DAY' (day). Defaults to H87 (piece) server-side if omitted; C62 (one) is accepted as well.")]
     public string? UnitCode { get; set; }
 
     [Description("Line net amount (BT-131) = quantity * net unit price, minus line allowances, plus line charges, excluding VAT. Server recomputes this if omitted.")]
