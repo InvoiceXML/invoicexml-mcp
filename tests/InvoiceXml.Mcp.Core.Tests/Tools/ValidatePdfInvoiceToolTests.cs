@@ -191,7 +191,7 @@ public class ValidatePdfInvoiceToolTests
             => throw new NotImplementedException();
 
         public Task<Models.DocumentArtifact> ConvertAsync(
-            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken ct = default)
+            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, PdfLanguage? language, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken ct = default)
             => throw new NotImplementedException();
 
         public Task<Models.DocumentArtifact> TransformAsync(

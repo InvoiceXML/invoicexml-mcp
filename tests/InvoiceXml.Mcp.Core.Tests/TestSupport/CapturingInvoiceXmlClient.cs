@@ -49,6 +49,7 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     public InvoiceFormat? LastConvertTarget { get; private set; }
     public byte[]? LastConvertContent { get; private set; }
     public string? LastConvertContentType { get; private set; }
+    public PdfLanguage? LastConvertLanguage { get; private set; }
 
     public InvoiceFormat? LastTransformTarget { get; private set; }
     public byte[]? LastTransformPdf { get; private set; }
@@ -189,9 +190,10 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<DocumentArtifact> ConvertAsync(
-        InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
+        InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, PdfLanguage? language, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
     {
         LastValidationLanguage = validationLanguage;
+        LastConvertLanguage = language;
         LastFooterBrand = footerBrand;
         LastConvertSource = source;
         LastConvertTarget = target;

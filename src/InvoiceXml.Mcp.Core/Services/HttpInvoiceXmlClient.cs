@@ -216,8 +216,8 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
 
         var form = new MultipartFormDataContent();
         form.Add(FilePart(System.Text.Encoding.UTF8.GetBytes(xml), "application/xml"), "file", "invoice.xml");
-        // API form field is a lower-case language code (en / de / fr); default is en.
-        form.Add(new StringContent(language.ToString().ToLowerInvariant()), "language");
+        // The API's default language is en.
+        form.Add(new StringContent(Code(language)), "language");
         // The API fetches a logoUrl itself (SSRF-guarded, re-encoded), so only the URL travels.
         if (!string.IsNullOrWhiteSpace(logoUrl))
             form.Add(new StringContent(logoUrl), "logoUrl");
@@ -291,6 +291,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         byte[] content,
         string contentType,
         string fileName,
+        PdfLanguage? language,
         FooterBrand? footerBrand,
         ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default)
@@ -305,10 +306,16 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         form.Add(FilePart(content, contentType), "file", fileName);
         AddValidationLanguage(form, validationLanguage);
 
-        // Only the render-and-embed promotions (XML to a hybrid PDF) print a footer.
+        // Only the render-and-embed promotions (XML to a hybrid PDF) render a PDF face, so
+        // only they take its language and footer. The language is omitted when unset so
+        // the API's own default (English) applies.
         var ext = target is InvoiceFormat.FacturX or InvoiceFormat.Zugferd ? "pdf" : "xml";
         if (ext == "pdf")
+        {
+            if (language is { } pdfLanguage)
+                form.Add(new StringContent(Code(pdfLanguage)), "language");
             AddFooterBrand(form, footerBrand);
+        }
 
         var path = $"{ApiVersionPrefix}/convert/{Slug(source)}/to/{Slug(target)}";
         return SendForArtifactAsync(path, form, $"invoice-{Slug(target)}.{ext}", cancellationToken);
@@ -344,7 +351,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         }
         else if (target is InvoiceFormat.FacturX or InvoiceFormat.Zugferd)
         {
-            form.Add(new StringContent(language?.ToString().ToLowerInvariant() ?? AutoTransformLanguage), "language");
+            form.Add(new StringContent(language is { } pdfLanguage ? Code(pdfLanguage) : AutoTransformLanguage), "language");
             if (preserveOriginalPdf)
                 form.Add(new StringContent("true"), "preserveOriginalPdf");
         }
@@ -437,6 +444,9 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
     private static string Slug(InvoiceFormat format) => format.ToString().ToLowerInvariant();
     private static string Slug(XmlInvoiceFormat format) => format.ToString().ToLowerInvariant();
     private static string Slug(PdfInvoiceFormat format) => format.ToString().ToLowerInvariant();
+
+    // The API's language form fields take lower-case codes (en / de / fr).
+    private static string Code(PdfLanguage language) => language.ToString().ToLowerInvariant();
 
     private static string DefaultFileName(InvoiceFormat format) => format switch
     {

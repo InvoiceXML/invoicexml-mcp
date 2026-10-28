@@ -466,21 +466,37 @@ public class HttpInvoiceXmlClientTests
     }
 
     [Fact]
-    public async Task ConvertAsync_SendsFooterBrandOnlyForHybridTargets()
+    public async Task ConvertAsync_SendsLanguageAndFooterBrandOnlyForHybridTargets()
     {
         var pdfHandler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
             HttpStatusCode.OK, [0x25, 0x50, 0x44, 0x46], "application/pdf", "invoice-facturx.pdf"));
         await new HttpInvoiceXmlClient(BuildClient(pdfHandler)).ConvertAsync(
             InvoiceFormat.Ubl, InvoiceFormat.FacturX, "<Invoice/>"u8.ToArray(), "application/xml", "invoice.xml",
-            FooterBrand.None, cancellationToken: CancellationToken.None);
+            PdfLanguage.DE, FooterBrand.None, cancellationToken: CancellationToken.None);
         Assert.Contains("name=footerBrand", pdfHandler.LastRequestBody);
+        Assert.Contains("name=language\r\n\r\nde\r\n", pdfHandler.LastRequestBody);
 
         var xmlHandler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
             HttpStatusCode.OK, "<x/>"u8.ToArray(), "application/xml", "invoice-cii.xml"));
         await new HttpInvoiceXmlClient(BuildClient(xmlHandler)).ConvertAsync(
             InvoiceFormat.Ubl, InvoiceFormat.Cii, "<Invoice/>"u8.ToArray(), "application/xml", "invoice.xml",
-            FooterBrand.None, cancellationToken: CancellationToken.None);
+            PdfLanguage.DE, FooterBrand.None, cancellationToken: CancellationToken.None);
         Assert.DoesNotContain("footerBrand", xmlHandler.LastRequestBody);
+        Assert.DoesNotContain("name=language", xmlHandler.LastRequestBody);
+    }
+
+    // An unset language is left out, so the API's own default (English) applies.
+    [Fact]
+    public async Task ConvertAsync_HybridTarget_OmitsLanguageWhenUnset()
+    {
+        var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
+            HttpStatusCode.OK, [0x25, 0x50, 0x44, 0x46], "application/pdf", "invoice-zugferd.pdf"));
+        await new HttpInvoiceXmlClient(BuildClient(handler)).ConvertAsync(
+            InvoiceFormat.XRechnung, InvoiceFormat.Zugferd, "<Invoice/>"u8.ToArray(), "application/xml", "invoice.xml",
+            language: null, footerBrand: null, cancellationToken: CancellationToken.None);
+
+        Assert.Equal("/v1/convert/xrechnung/to/zugferd", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.DoesNotContain("name=language", handler.LastRequestBody);
     }
 
     [Fact]
@@ -669,7 +685,7 @@ public class HttpInvoiceXmlClientTests
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
         var result = await client.ConvertAsync(
-            InvoiceFormat.Cii, InvoiceFormat.Ubl, xml, "application/xml", "invoice.xml", footerBrand: null, cancellationToken: CancellationToken.None);
+            InvoiceFormat.Cii, InvoiceFormat.Ubl, xml, "application/xml", "invoice.xml", language: null, footerBrand: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal("/v1/convert/cii/to/ubl", handler.LastRequest!.RequestUri!.AbsolutePath);
         Assert.StartsWith("multipart/form-data", handler.LastRequest.Content!.Headers.ContentType!.MediaType);

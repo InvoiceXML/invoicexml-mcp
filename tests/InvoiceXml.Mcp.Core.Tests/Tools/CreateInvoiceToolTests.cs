@@ -203,7 +203,7 @@ public class CreateInvoiceToolTests
             => throw new NotImplementedException();
 
         public Task<DocumentArtifact> ConvertAsync(
-            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
+            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, PdfLanguage? language, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<DocumentArtifact> TransformAsync(
@@ -254,7 +254,7 @@ public class CreateInvoiceToolTests
             => Task.FromException<DocumentArtifact>(ex);
 
         public Task<DocumentArtifact> ConvertAsync(
-            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
+            InvoiceFormat source, InvoiceFormat target, byte[] content, string contentType, string fileName, PdfLanguage? language, FooterBrand? footerBrand, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => Task.FromException<DocumentArtifact>(ex);
 
         public Task<DocumentArtifact> TransformAsync(

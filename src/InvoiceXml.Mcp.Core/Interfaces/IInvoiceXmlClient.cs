@@ -156,9 +156,10 @@ public interface IInvoiceXmlClient
     /// Calls <c>POST /v1/convert/{source}/to/{target}</c> with the supplied document
     /// uploaded as <c>multipart/form-data</c>. The source bytes are XML for plain-XML
     /// sources and a hybrid PDF for Factur-X / ZUGFeRD sources; the result is XML or
-    /// a hybrid PDF depending on <paramref name="target"/>. <paramref name="footerBrand"/>
-    /// only travels on hybrid-PDF targets, where the API renders a PDF face.
-    /// <paramref name="validationLanguage"/> words the findings of a failed
+    /// a hybrid PDF depending on <paramref name="target"/>. <paramref name="language"/>
+    /// and <paramref name="footerBrand"/> only travel on hybrid-PDF targets, where the
+    /// API renders a PDF face; a null language is omitted so the API's default (English)
+    /// applies. <paramref name="validationLanguage"/> words the findings of a failed
     /// conversion; omitted when null.
     /// </summary>
     Task<DocumentArtifact> ConvertAsync(
@@ -167,6 +168,7 @@ public interface IInvoiceXmlClient
         byte[] content,
         string contentType,
         string fileName,
+        PdfLanguage? language,
         FooterBrand? footerBrand,
         ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default);

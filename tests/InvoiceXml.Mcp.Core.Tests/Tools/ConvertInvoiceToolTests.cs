@@ -67,6 +67,19 @@ public class ConvertInvoiceToolTests
     }
 
     [Fact]
+    public async Task XmlToHybrid_ForwardsLanguage()
+    {
+        var client = new CapturingInvoiceXmlClient();
+        var tool = Build(client);
+
+        var result = await tool.ConvertInvoiceAsync(
+            InvoiceFormat.Ubl, InvoiceFormat.FacturX, CancellationToken.None, xml: SampleXml, language: PdfLanguage.FR);
+
+        Assert.False(result.IsError ?? false);
+        Assert.Equal(PdfLanguage.FR, client.LastConvertLanguage);
+    }
+
+    [Fact]
     public async Task UnsupportedPair_RejectedBeforeApiCall()
     {
         var client = new CapturingInvoiceXmlClient();
