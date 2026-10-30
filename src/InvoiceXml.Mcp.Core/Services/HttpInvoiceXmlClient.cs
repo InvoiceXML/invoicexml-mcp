@@ -52,6 +52,30 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         };
     }
 
+    public async Task<EmailSendResult> EmailInvoiceAsync(
+        InvoiceFormat format,
+        InvoiceDocument invoice,
+        CreateInvoiceOptions? options,
+        EmailMessage email,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(invoice);
+        ArgumentNullException.ThrowIfNull(email);
+
+        var requestBody = new CreateInvoiceEmailRequest
+        {
+            Invoice = invoice,
+            Options = options ?? new CreateInvoiceOptions(),
+            Email = email,
+        };
+
+        var path = $"{ApiVersionPrefix}/create/{Slug(format)}/email";
+        using var response = await _http.PostAsJsonAsync(
+            path, requestBody, InvoiceXmlJsonOptions.Default, cancellationToken).ConfigureAwait(false);
+
+        return await ReadEmailResultAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<DocumentArtifact> CreateOrderAsync(
         OrderFormat format,
         InvoiceDocument order,
@@ -285,6 +309,34 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         return SendForArtifactAsync(path, form, $"invoice-{Slug(format)}.pdf", cancellationToken);
     }
 
+    public async Task<EmailSendResult> EmailEmbeddedAsync(
+        PdfInvoiceFormat format,
+        byte[] pdf,
+        string ciiXml,
+        EmailMessage email,
+        IReadOnlyList<ExtraRuleset>? rules,
+        ValidationLanguage? validationLanguage = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(pdf);
+        if (pdf.Length == 0)
+            throw new ArgumentException("PDF bytes must not be empty.", nameof(pdf));
+        ArgumentException.ThrowIfNullOrWhiteSpace(ciiXml);
+        ArgumentNullException.ThrowIfNull(email);
+
+        using var form = new MultipartFormDataContent();
+        form.Add(FilePart(pdf, "application/pdf"), "pdf", "invoice.pdf");
+        form.Add(FilePart(System.Text.Encoding.UTF8.GetBytes(ciiXml), "application/xml"), "xml", "invoice.xml");
+        AddRules(form, rules);
+        AddValidationLanguage(form, validationLanguage);
+        AddEmail(form, email);
+
+        var path = $"{ApiVersionPrefix}/embed/{Slug(format)}/email";
+        using var response = await _http.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
+
+        return await ReadEmailResultAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
     public Task<DocumentArtifact> ConvertAsync(
         InvoiceFormat source,
         InvoiceFormat target,
@@ -387,6 +439,27 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
             form.Add(new StringContent(EnumWire.Slug(language)), "validationLanguage");
     }
 
+    // The embed email routes take the email as plain form fields; cc and bcc repeat per address.
+    private static void AddEmail(MultipartFormDataContent form, EmailMessage email)
+    {
+        AddField(form, "email.from", email.From);
+        AddField(form, "email.fromName", email.FromName);
+        AddField(form, "email.to", email.To);
+        foreach (var address in email.Cc ?? [])
+            AddField(form, "email.cc", address);
+        foreach (var address in email.Bcc ?? [])
+            AddField(form, "email.bcc", address);
+        AddField(form, "email.replyTo", email.ReplyTo);
+        AddField(form, "email.subject", email.Subject);
+        AddField(form, "email.message", email.Message);
+    }
+
+    private static void AddField(MultipartFormDataContent form, string name, string? value)
+    {
+        if (value is not null)
+            form.Add(new StringContent(value), name);
+    }
+
     private static ByteArrayContent FilePart(byte[] bytes, string contentType)
     {
         var part = new ByteArrayContent(bytes);
@@ -422,6 +495,19 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
             ContentType = contentType,
             FileName = fileName,
         };
+    }
+
+    private static async Task<EmailSendResult> ReadEmailResultAsync(
+        HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+
+        var result = await response.Content
+            .ReadFromJsonAsync<EmailSendResult>(InvoiceXmlJsonOptions.Default, cancellationToken)
+            .ConfigureAwait(false);
+
+        return result ?? throw new InvalidOperationException(
+            "InvoiceXML API returned an empty email response.");
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)

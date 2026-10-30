@@ -26,7 +26,7 @@ public enum ToolFailureCategory
     /// <summary>Rate limit exceeded. Wait before retrying.</summary>
     RateLimited,
 
-    /// <summary>InvoiceXML API returned a 5xx. May be transient — retry may help.</summary>
+    /// <summary>InvoiceXML API returned a 5xx. May be transient, so a retry may help.</summary>
     Server,
 
     /// <summary>The MCP host could not reach the InvoiceXML API. Server configuration issue.</summary>
@@ -113,11 +113,11 @@ internal static class ToolFailure
         ToolFailureCategory.Unauthorized =>
             "The MCP server's InvoiceXML credentials were rejected. This is a server " +
             "configuration issue, not something you can fix by changing the request. " +
-            "Do not retry — surface the failure to the user.",
+            "Do not retry: surface the failure to the user.",
 
         ToolFailureCategory.Forbidden =>
             "The authenticated InvoiceXML account is not permitted to call this endpoint. " +
-            "Do not retry — the user needs to upgrade their plan or contact support.",
+            "Do not retry: the user needs to upgrade their plan or contact support.",
 
         ToolFailureCategory.RateLimited =>
             "The InvoiceXML API rate limit was hit. Wait a few seconds before retrying. " +

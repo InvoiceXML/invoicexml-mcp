@@ -103,6 +103,36 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
         });
     }
 
+    public InvoiceFormat? LastEmailFormat { get; private set; }
+    public EmailMessage? LastEmail { get; private set; }
+    public IReadOnlyList<ExtraRuleset>? LastEmailRules { get; private set; }
+
+    /// <summary>When set, the email methods fail with this instead of answering.</summary>
+    public Exception? EmailFailure { get; init; }
+
+    public Task<EmailSendResult> EmailInvoiceAsync(
+        InvoiceFormat format, InvoiceDocument invoice, CreateInvoiceOptions? options, EmailMessage email, CancellationToken cancellationToken = default)
+    {
+        LastEmailFormat = format;
+        LastEmail = email;
+        return EmailAnswer();
+    }
+
+    public Task<EmailSendResult> EmailEmbeddedAsync(
+        PdfInvoiceFormat format, byte[] pdf, string ciiXml, EmailMessage email, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
+    {
+        LastEmbedFormat = format;
+        LastEmbedPdf = pdf;
+        LastEmbedXml = ciiXml;
+        LastEmail = email;
+        LastEmailRules = rules;
+        return EmailAnswer();
+    }
+
+    private Task<EmailSendResult> EmailAnswer() => EmailFailure is { } failure
+        ? Task.FromException<EmailSendResult>(failure)
+        : Task.FromResult(new EmailSendResult { Status = "accepted", MessageId = "0100019a-abc" });
+
     public Task<DocumentArtifact> CreateOrderAsync(
         OrderFormat format, InvoiceDocument order, CreateOrderOptions? options, CancellationToken cancellationToken = default)
     {

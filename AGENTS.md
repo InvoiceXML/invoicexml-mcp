@@ -67,7 +67,8 @@ InvoiceXml.Mcp.Core  --ProjectReference-->  InvoiceXml.Mcp.Host
 
 `create_invoice`, `validate_xml_invoice`, `validate_pdf_invoice`,
 `render_validation_report`, `render_invoice`, `extract_invoice`, `embed_invoice`,
-`convert_invoice`, `transform_invoice`, `create_order`, `validate_order`, `get_account`.
+`email_invoice`, `email_embedded_invoice`, `convert_invoice`, `transform_invoice`,
+`create_order`, `validate_order`, `get_account`.
 
 The `InvoiceDocument` model mirrors the API's `InvoiceDocument` field for field
 (camelCase wire names); `ToolSchemaTests` guards what the advertised schema

@@ -197,5 +197,13 @@ public class ValidatePdfInvoiceToolTests
         public Task<Models.DocumentArtifact> TransformAsync(
             InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, bool includeAdvancedProperties, string? buyerReference, ValidationLanguage? validationLanguage, CancellationToken ct = default)
             => throw new NotImplementedException();
+
+        public Task<Models.EmailSendResult> EmailInvoiceAsync(
+            InvoiceFormat format, Models.InvoiceDocument invoice, Models.CreateInvoiceOptions? options, Models.EmailMessage email, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public Task<Models.EmailSendResult> EmailEmbeddedAsync(
+            PdfInvoiceFormat format, byte[] pdf, string ciiXml, Models.EmailMessage email, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken ct = default)
+            => throw new NotImplementedException();
     }
 }

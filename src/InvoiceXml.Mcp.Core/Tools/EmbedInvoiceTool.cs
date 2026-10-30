@@ -74,74 +74,15 @@ public sealed class EmbedInvoiceTool
         if (rulesError is not null)
             return ArtifactTools.InputError("INPUT-RULES", rulesError, ["rules"], slug);
 
-        var pdfExclusive = ArtifactTools.ValidateExactlyOne(
-        [
-            ("pdfUrl", !string.IsNullOrWhiteSpace(pdfUrl)),
-            ("pdfBase64", !string.IsNullOrWhiteSpace(pdfBase64)),
-        ], slug);
-        if (pdfExclusive is not null)
-            return pdfExclusive;
-
-        var xmlExclusive = ArtifactTools.ValidateExactlyOne(
-        [
-            ("xml", !string.IsNullOrWhiteSpace(xml)),
-            ("xmlUrl", !string.IsNullOrWhiteSpace(xmlUrl)),
-        ], slug);
-        if (xmlExclusive is not null)
-            return xmlExclusive;
-
-        byte[] pdfBytes;
-        if (!string.IsNullOrWhiteSpace(pdfUrl))
-        {
-            var (fetched, error) = await ArtifactTools
-                .FetchUrlAsync(_fetcher, pdfUrl, "pdfUrl", slug, cancellationToken)
-                .ConfigureAwait(false);
-            if (error is not null)
-                return error;
-            pdfBytes = fetched!;
-        }
-        else
-        {
-            try
-            {
-                pdfBytes = Convert.FromBase64String(pdfBase64!);
-            }
-            catch (FormatException)
-            {
-                return ArtifactTools.InputError("INPUT-BASE64",
-                    "pdfBase64 is not valid base64. Use standard base64 (no chunking, no URL-safe alphabet). " +
-                    "For anything but a small file, pass a public https:// URL via pdfUrl instead.",
-                    ["pdfBase64"], slug);
-            }
-        }
-
-        if (PdfSniffer.IsIncompletePdf(pdfBytes))
-        {
-            return ArtifactTools.InputError("INPUT-INCOMPLETE-PDF",
-                $"Received {pdfBytes.Length:N0} bytes that start like a PDF but have no %%EOF trailer; " +
-                "the file is truncated or was reconstructed. If you don't have the real file bytes, " +
-                "do not rebuild them: pass a public https:// URL via pdfUrl instead.",
-                ["pdfBase64", "pdfUrl"], slug);
-        }
-
-        string ciiXml;
-        if (!string.IsNullOrWhiteSpace(xml))
-        {
-            ciiXml = xml;
-        }
-        else
-        {
-            var (fetched, error) = await ArtifactTools
-                .FetchUrlAsync(_fetcher, xmlUrl!, "xmlUrl", slug, cancellationToken)
-                .ConfigureAwait(false);
-            if (error is not null)
-                return error;
-            ciiXml = ArtifactTools.DecodeUtf8(fetched!);
-        }
+        var (inputs, inputError) = await EmbedInputs
+            .ResolveAsync(_fetcher, pdfUrl, pdfBase64, xml, xmlUrl, slug, cancellationToken)
+            .ConfigureAwait(false);
+        if (inputError is not null)
+            return inputError;
 
         return await ArtifactTools.ExecuteAsync(
             slug,
-            () => _client.EmbedAsync(format, pdfBytes, ciiXml, rules, validationLanguage, cancellationToken),
+            () => _client.EmbedAsync(format, inputs!.Pdf, inputs.CiiXml, rules, validationLanguage, cancellationToken),
             artifact =>
                 $"Embedded the CII XML into a {slug} hybrid PDF/A-3 ({artifact.Content.Length:N0} bytes) as {artifact.FileName}. " +
                 "Delivered as an embedded resource attachment; refer to it by file name and do not attempt to read its bytes.",

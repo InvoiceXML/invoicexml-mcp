@@ -83,7 +83,8 @@ internal static class ArtifactTools
         return text.Length > 0 && text[0] == '﻿' ? text[1..] : text;
     }
 
-    private static CallToolResult Failure(string? formatSlug, ToolFailure.Translation t) =>
+    /// <summary>Packages a translated failure as a tool result.</summary>
+    public static CallToolResult Failure(string? formatSlug, ToolFailure.Translation t) =>
         ToolResults.ForFailure(new ToolFailurePayload
         {
             Success = false,

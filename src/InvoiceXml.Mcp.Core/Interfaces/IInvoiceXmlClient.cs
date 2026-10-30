@@ -26,6 +26,18 @@ public interface IInvoiceXmlClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Calls <c>POST /v1/create/{format}/email</c>: creates the invoice like
+    /// <see cref="CreateInvoiceAsync"/> and emails it instead of returning it.
+    /// Returns the message id of the sent email.
+    /// </summary>
+    Task<EmailSendResult> EmailInvoiceAsync(
+        InvoiceFormat format,
+        InvoiceDocument invoice,
+        CreateInvoiceOptions? options,
+        EmailMessage email,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Calls <c>POST /v1/create/cio</c> (plain Cross-Industry Order XML) or
     /// <c>POST /v1/create/order-x</c> (hybrid PDF/A-3) with the supplied order.
     /// Orders reuse the invoice document model, sent under an <c>order</c> key.
@@ -148,6 +160,20 @@ public interface IInvoiceXmlClient
         PdfInvoiceFormat format,
         byte[] pdf,
         string ciiXml,
+        IReadOnlyList<ExtraRuleset>? rules,
+        ValidationLanguage? validationLanguage = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Calls <c>POST /v1/embed/{format}/email</c>: embeds like <see cref="EmbedAsync"/>,
+    /// always with full validation, and emails the hybrid PDF instead of returning it.
+    /// Returns the message id of the sent email.
+    /// </summary>
+    Task<EmailSendResult> EmailEmbeddedAsync(
+        PdfInvoiceFormat format,
+        byte[] pdf,
+        string ciiXml,
+        EmailMessage email,
         IReadOnlyList<ExtraRuleset>? rules,
         ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default);

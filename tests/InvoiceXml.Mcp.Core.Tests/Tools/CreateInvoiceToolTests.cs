@@ -209,6 +209,14 @@ public class CreateInvoiceToolTests
         public Task<DocumentArtifact> TransformAsync(
             InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, bool includeAdvancedProperties, string? buyerReference, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
+
+        public Task<EmailSendResult> EmailInvoiceAsync(
+            InvoiceFormat format, InvoiceDocument invoice, CreateInvoiceOptions? options, EmailMessage email, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public Task<EmailSendResult> EmailEmbeddedAsync(
+            PdfInvoiceFormat format, byte[] pdf, string ciiXml, EmailMessage email, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
     }
 
     private sealed class ThrowingInvoiceXmlClient(Exception ex) : IInvoiceXmlClient
@@ -260,5 +268,13 @@ public class CreateInvoiceToolTests
         public Task<DocumentArtifact> TransformAsync(
             InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, bool includeAdvancedProperties, string? buyerReference, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
             => Task.FromException<DocumentArtifact>(ex);
+
+        public Task<EmailSendResult> EmailInvoiceAsync(
+            InvoiceFormat format, InvoiceDocument invoice, CreateInvoiceOptions? options, EmailMessage email, CancellationToken cancellationToken = default)
+            => Task.FromException<EmailSendResult>(ex);
+
+        public Task<EmailSendResult> EmailEmbeddedAsync(
+            PdfInvoiceFormat format, byte[] pdf, string ciiXml, EmailMessage email, IReadOnlyList<ExtraRuleset>? rules, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
+            => Task.FromException<EmailSendResult>(ex);
     }
 }

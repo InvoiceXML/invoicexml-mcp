@@ -50,6 +50,13 @@ public static class McpServerBuilderExtensions
         "out of a Factur-X / ZUGFeRD hybrid PDF.\n" +
         "• Embed XML into Hybrid PDF (embed_invoice): combine a PDF and a CII XML into a Factur-X / ZUGFeRD hybrid PDF.\n" +
         "\n" +
+        "Email\n" +
+        "• Create and Email Invoice (email_invoice): create an invoice like create_invoice and email it from the " +
+        "user's own verified domain.\n" +
+        "• Embed XML into PDF and Email (email_embedded_invoice): embed like embed_invoice and email the hybrid PDF. " +
+        "Both send a real email that cannot be recalled: get the user's go-ahead on the sender, the recipients, " +
+        "the reply-to address, the subject and the message first.\n" +
+        "\n" +
         "Convert\n" +
         "• Convert Invoice Format (convert_invoice): deterministic syntax conversion between formats " +
         "(e.g. ubl<->cii, xrechnung->ubl, ubl->facturx, facturx->cii).\n" +

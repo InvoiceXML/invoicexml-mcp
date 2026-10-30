@@ -95,17 +95,9 @@ public sealed class CreateInvoiceTool
     {
         ArgumentNullException.ThrowIfNull(invoice);
 
-        // The create routes bill even a 400, so an unsupported rule set or a logo
-        // the API would refuse is turned down here rather than spending a credit
-        // on the API's own refusal.
-        var slug = format.ToString().ToLowerInvariant();
-        var rulesError = ExtraRules.Unsupported(options?.Rules, slug, "ubl", "cii", "facturx");
-        if (rulesError is not null)
-            return ArtifactTools.InputError("INPUT-RULES", rulesError, ["options.rules"], slug);
-
-        var logoError = InlineLogo.Refused(options?.Logo, options?.LogoUrl, "options.");
-        if (logoError is not null)
-            return ArtifactTools.InputError("INPUT-LOGO", logoError, ["options.logo"], slug);
+        var refused = RefuseOptions(options, format.ToString().ToLowerInvariant());
+        if (refused is not null)
+            return refused;
 
         try
         {
@@ -132,6 +124,21 @@ public sealed class CreateInvoiceTool
             // treat as a network-class failure rather than letting it propagate as a generic crash.
             return ToolResults.ForFailure(BuildFailurePayload(format, ToolFailure.FromNetworkException(ex)));
         }
+    }
+
+    /// <summary>
+    /// The create routes bill even a 400, so an unsupported rule set or a logo the API
+    /// would refuse is turned down here rather than spending a credit on the API's own
+    /// refusal. Returns <see langword="null"/> when the options are fine.
+    /// </summary>
+    internal static CallToolResult? RefuseOptions(CreateInvoiceOptions? options, string slug)
+    {
+        var rulesError = ExtraRules.Unsupported(options?.Rules, slug, "ubl", "cii", "facturx");
+        if (rulesError is not null)
+            return ArtifactTools.InputError("INPUT-RULES", rulesError, ["options.rules"], slug);
+
+        var logoError = InlineLogo.Refused(options?.Logo, options?.LogoUrl, "options.");
+        return logoError is null ? null : ArtifactTools.InputError("INPUT-LOGO", logoError, ["options.logo"], slug);
     }
 
     private static string BuildSuccessSummary(InvoiceFormat format, CreateInvoiceResult result)

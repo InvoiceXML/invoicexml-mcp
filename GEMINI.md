@@ -31,6 +31,8 @@ Landing page: `https://www.invoicexml.com/mcp-server`.
 | `render_invoice` | Turn UBL / CII / XRechnung XML into a clean, human-readable PDF preview. |
 | `extract_invoice` | Pull the structured JSON or the embedded CII XML out of a hybrid PDF, or the structured JSON out of a UBL / CII XML. |
 | `embed_invoice` | Combine a PDF and a CII XML into a Factur-X / ZUGFeRD hybrid PDF. |
+| `email_invoice` | Create an invoice and email it from the user's own verified domain. Sends a real email: get the user's go-ahead first. |
+| `email_embedded_invoice` | Combine a PDF and a CII XML into a hybrid PDF and email it from the user's own verified domain. Sends a real email: get the user's go-ahead first. |
 | `convert_invoice` | Convert between UBL, CII, XRechnung, Factur-X, and ZUGFeRD. |
 | `transform_invoice` | Turn an ordinary PDF invoice (no embedded XML) into an e-invoice; AI reads the data, so the user must check the result. |
 | `render_validation_report` | Validate an invoice or Order-X order and get the result as a printable PDF report. |
