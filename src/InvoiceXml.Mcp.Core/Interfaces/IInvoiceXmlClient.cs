@@ -182,16 +182,21 @@ public interface IInvoiceXmlClient
     /// (facturx/zugferd) return a PDF/A-3. On the hybrid targets
     /// <paramref name="language"/> words the rendered pages and the XML's default texts
     /// (null sends <c>auto</c>: the language the invoice is written in, English when
-    /// the renderer lacks it) and <paramref name="preserveOriginalPdf"/> keeps the
-    /// uploaded PDF as the visual layer; <paramref name="buyerReference"/> supplies the
-    /// BT-10 buyer reference required by XRechnung. <paramref name="validationLanguage"/>
-    /// words the findings of a failed transform; omitted when null.
+    /// the renderer lacks it), <paramref name="preserveOriginalPdf"/> keeps the
+    /// uploaded PDF as the visual layer and <paramref name="includeAdvancedProperties"/>
+    /// adds the "Electronic invoice details" section (the technical properties of the
+    /// embedded XML) to the rendered pages, sent as an explicit true or false so the
+    /// tool's own default holds whatever the API's is; <paramref name="buyerReference"/>
+    /// supplies the BT-10 buyer reference required by XRechnung.
+    /// <paramref name="validationLanguage"/> words the findings of a failed transform;
+    /// omitted when null.
     /// </summary>
     Task<DocumentArtifact> TransformAsync(
         InvoiceFormat target,
         byte[] pdf,
         PdfLanguage? language,
         bool preserveOriginalPdf,
+        bool includeAdvancedProperties,
         string? buyerReference,
         ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default);

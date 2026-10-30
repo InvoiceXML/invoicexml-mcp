@@ -329,6 +329,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
         byte[] pdf,
         PdfLanguage? language,
         bool preserveOriginalPdf,
+        bool includeAdvancedProperties,
         string? buyerReference,
         ValidationLanguage? validationLanguage = null,
         CancellationToken cancellationToken = default)
@@ -343,8 +344,9 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
 
         // The XRechnung route needs an explicit buyer reference (BT-10); the hybrid-PDF
         // routes take a language for the pages and the XML's default texts (auto lets the
-        // detected language decide) and a switch that keeps the uploaded pages, omitted
-        // when off so the API's default applies. Other routes ignore extra fields.
+        // detected language decide), a switch that keeps the uploaded pages, omitted when
+        // off so the API's default applies, and the advanced-details switch, always sent so
+        // the tool's own default holds whatever the API's is. Other routes ignore extra fields.
         if (target is InvoiceFormat.XRechnung)
         {
             form.Add(new StringContent(buyerReference ?? string.Empty), "buyerReference");
@@ -354,6 +356,7 @@ internal sealed class HttpInvoiceXmlClient : IInvoiceXmlClient
             form.Add(new StringContent(language is { } pdfLanguage ? Code(pdfLanguage) : AutoTransformLanguage), "language");
             if (preserveOriginalPdf)
                 form.Add(new StringContent("true"), "preserveOriginalPdf");
+            form.Add(new StringContent(includeAdvancedProperties ? "true" : "false"), "includeAdvancedProperties");
         }
 
         var path = $"{ApiVersionPrefix}/transform/to/{Slug(target)}";

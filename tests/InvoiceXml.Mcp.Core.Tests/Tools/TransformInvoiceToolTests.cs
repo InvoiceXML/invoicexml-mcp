@@ -8,9 +8,9 @@ using ModelContextProtocol.Protocol;
 namespace InvoiceXml.Mcp.Core.Tests.Tools;
 
 /// <summary>
-/// The transform tool's own fields (language, preserveOriginalPdf, buyerReference) and
-/// the review reminder every success carries, since the data behind a transform is an
-/// AI read of the PDF.
+/// The transform tool's own fields (language, preserveOriginalPdf, includeAdvancedProperties,
+/// buyerReference) and the review reminder every success carries, since the data behind a
+/// transform is an AI read of the PDF.
 /// </summary>
 public class TransformInvoiceToolTests
 {
@@ -27,8 +27,10 @@ public class TransformInvoiceToolTests
     private static TransformInvoiceTool Build(CapturingInvoiceXmlClient? client = null)
         => new(client ?? new CapturingInvoiceXmlClient(), new FakeRemoteFileFetcher(SamplePdf));
 
+    // The defaults: detected language, the uploaded pages not kept, and the advanced-details
+    // section on, so the user can check the embedded XML on the rendered pages.
     [Fact]
-    public async Task HybridTarget_LeavesLanguageToTheDetection_AndPreserveOff_ByDefault()
+    public async Task HybridTarget_LeavesLanguageToTheDetection_PreserveOff_AndAdvancedPropertiesOn_ByDefault()
     {
         var client = new CapturingInvoiceXmlClient();
 
@@ -40,19 +42,21 @@ public class TransformInvoiceToolTests
         Assert.Equal(SamplePdf, client.LastTransformPdf);
         Assert.Null(client.LastTransformLanguage);
         Assert.False(client.LastTransformPreserveOriginalPdf);
+        Assert.True(client.LastTransformIncludeAdvancedProperties);
     }
 
     [Fact]
-    public async Task HybridTarget_ForwardsLanguageAndPreserveOriginalPdf()
+    public async Task HybridTarget_ForwardsLanguagePreserveOriginalPdfAndAdvancedPropertiesOff()
     {
         var client = new CapturingInvoiceXmlClient();
 
         await Build(client).TransformInvoiceAsync(
             InvoiceFormat.FacturX, CancellationToken.None, pdfBase64: Convert.ToBase64String(SamplePdf),
-            language: PdfLanguage.FR, preserveOriginalPdf: true);
+            language: PdfLanguage.FR, preserveOriginalPdf: true, includeAdvancedProperties: false);
 
         Assert.Equal(PdfLanguage.FR, client.LastTransformLanguage);
         Assert.True(client.LastTransformPreserveOriginalPdf);
+        Assert.False(client.LastTransformIncludeAdvancedProperties);
     }
 
     [Fact]
@@ -76,6 +80,20 @@ public class TransformInvoiceToolTests
         Assert.Equal(2, result.Content.Count);
         var summary = Assert.IsType<TextContentBlock>(result.Content[0]);
         Assert.IsType<EmbeddedResourceBlock>(result.Content[1]);
+        Assert.Contains("Electronic invoice details", summary.Text);
+        Assert.Contains("doubles as the PDF preview", summary.Text);
+        Assert.EndsWith(TransformInvoiceTool.ReviewReminder, summary.Text);
+    }
+
+    [Fact]
+    public async Task PdfTarget_WithoutAdvancedProperties_DoesNotPromiseTheDetailsSection()
+    {
+        var result = await Build().TransformInvoiceAsync(
+            InvoiceFormat.Zugferd, CancellationToken.None, pdfUrl: "https://example.com/invoice.pdf",
+            includeAdvancedProperties: false);
+
+        var summary = Assert.IsType<TextContentBlock>(result.Content[0]);
+        Assert.DoesNotContain("Electronic invoice details", summary.Text);
         Assert.Contains("doubles as the PDF preview", summary.Text);
         Assert.EndsWith(TransformInvoiceTool.ReviewReminder, summary.Text);
     }

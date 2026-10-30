@@ -499,40 +499,46 @@ public class HttpInvoiceXmlClientTests
         Assert.DoesNotContain("name=language", handler.LastRequestBody);
     }
 
+    // The tool's defaults: auto language, the uploaded pages not kept (field omitted, so the
+    // API's default applies) and the advanced-details section on (sent explicitly, so the
+    // tool's default holds whatever the API's is).
     [Fact]
-    public async Task TransformAsync_HybridTarget_SendsAutoLanguageByDefault_AndNoPreserveField()
+    public async Task TransformAsync_HybridTarget_SendsAutoLanguageByDefault_NoPreserveField_AndAdvancedPropertiesOn()
     {
         var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
             HttpStatusCode.OK, [0x25, 0x50, 0x44, 0x46], "application/pdf", "invoice-zugferd.pdf"));
         var client = new HttpInvoiceXmlClient(BuildClient(handler));
 
         var result = await client.TransformAsync(
-            InvoiceFormat.Zugferd, [0x25, 0x50, 0x44, 0x46], language: null, preserveOriginalPdf: false, buyerReference: null, cancellationToken: CancellationToken.None);
+            InvoiceFormat.Zugferd, [0x25, 0x50, 0x44, 0x46], language: null, preserveOriginalPdf: false, includeAdvancedProperties: true,
+            buyerReference: null, cancellationToken: CancellationToken.None);
 
         Assert.Equal("/v1/transform/to/zugferd", handler.LastRequest!.RequestUri!.AbsolutePath);
         var body = handler.LastRequestBody!;
         Assert.Contains("name=language", body);
         Assert.Contains(HttpInvoiceXmlClient.AutoTransformLanguage, body);
         Assert.DoesNotContain("preserveOriginalPdf", body);
+        Assert.Equal("true", FormPartValue(body, "includeAdvancedProperties"));
         Assert.DoesNotContain("buyerReference", body);
         Assert.Equal("invoice-zugferd.pdf", result.FileName);
     }
 
     [Fact]
-    public async Task TransformAsync_HybridTarget_SendsLanguageAndPreserveOriginalPdfWhenSet()
+    public async Task TransformAsync_HybridTarget_SendsLanguagePreserveOriginalPdfAndAdvancedPropertiesOffWhenSet()
     {
         var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
             HttpStatusCode.OK, [0x25, 0x50, 0x44, 0x46], "application/pdf", "invoice-facturx.pdf"));
 
         await new HttpInvoiceXmlClient(BuildClient(handler)).TransformAsync(
-            InvoiceFormat.FacturX, [0x25, 0x50, 0x44, 0x46], PdfLanguage.FR, preserveOriginalPdf: true, buyerReference: null, cancellationToken: CancellationToken.None);
+            InvoiceFormat.FacturX, [0x25, 0x50, 0x44, 0x46], PdfLanguage.FR, preserveOriginalPdf: true, includeAdvancedProperties: false,
+            buyerReference: null, cancellationToken: CancellationToken.None);
 
         var body = handler.LastRequestBody!;
         Assert.Contains("name=language", body);
         Assert.Contains("fr", body);
         Assert.DoesNotContain(HttpInvoiceXmlClient.AutoTransformLanguage, body);
-        Assert.Contains("name=preserveOriginalPdf", body);
-        Assert.Contains("true", body);
+        Assert.Equal("true", FormPartValue(body, "preserveOriginalPdf"));
+        Assert.Equal("false", FormPartValue(body, "includeAdvancedProperties"));
     }
 
     [Fact]
@@ -541,18 +547,37 @@ public class HttpInvoiceXmlClientTests
         var xrechnung = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
             HttpStatusCode.OK, "<x/>"u8.ToArray(), "application/xml", "invoice-xrechnung.xml"));
         await new HttpInvoiceXmlClient(BuildClient(xrechnung)).TransformAsync(
-            InvoiceFormat.XRechnung, [0x25, 0x50, 0x44, 0x46], PdfLanguage.DE, preserveOriginalPdf: true, buyerReference: "04011000-12345-67", cancellationToken: CancellationToken.None);
+            InvoiceFormat.XRechnung, [0x25, 0x50, 0x44, 0x46], PdfLanguage.DE, preserveOriginalPdf: true, includeAdvancedProperties: true,
+            buyerReference: "04011000-12345-67", cancellationToken: CancellationToken.None);
         Assert.Contains("name=buyerReference", xrechnung.LastRequestBody);
         Assert.Contains("04011000-12345-67", xrechnung.LastRequestBody);
         Assert.DoesNotContain("name=language", xrechnung.LastRequestBody);
         Assert.DoesNotContain("preserveOriginalPdf", xrechnung.LastRequestBody);
+        Assert.DoesNotContain("includeAdvancedProperties", xrechnung.LastRequestBody);
 
         var ubl = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
             HttpStatusCode.OK, "<x/>"u8.ToArray(), "application/xml", "invoice-ubl.xml"));
         await new HttpInvoiceXmlClient(BuildClient(ubl)).TransformAsync(
-            InvoiceFormat.Ubl, [0x25, 0x50, 0x44, 0x46], language: null, preserveOriginalPdf: false, buyerReference: null, cancellationToken: CancellationToken.None);
+            InvoiceFormat.Ubl, [0x25, 0x50, 0x44, 0x46], language: null, preserveOriginalPdf: false, includeAdvancedProperties: true,
+            buyerReference: null, cancellationToken: CancellationToken.None);
         Assert.DoesNotContain("name=language", ubl.LastRequestBody);
         Assert.DoesNotContain("buyerReference", ubl.LastRequestBody);
+        Assert.DoesNotContain("includeAdvancedProperties", ubl.LastRequestBody);
+    }
+
+    // The value of one text part of a multipart body: the line after the blank line that
+    // ends the part's headers. Null when the body has no part of that name.
+    private static string? FormPartValue(string body, string name)
+    {
+        var header = body.IndexOf($"name={name}", StringComparison.Ordinal);
+        if (header < 0)
+            return null;
+        var blank = body.IndexOf("\r\n\r\n", header, StringComparison.Ordinal);
+        if (blank < 0)
+            return null;
+        var start = blank + 4;
+        var end = body.IndexOf("\r\n", start, StringComparison.Ordinal);
+        return end < 0 ? body[start..] : body[start..end];
     }
 
     private static int CountOccurrences(string text, string value)

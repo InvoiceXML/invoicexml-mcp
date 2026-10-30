@@ -92,12 +92,27 @@ public class ToolSchemaTests
     [Theory]
     [InlineData("language")]
     [InlineData("preserveOriginalPdf")]
+    [InlineData("includeAdvancedProperties")]
     [InlineData("buyerReference")]
     public void TransformInvoice_SchemaAdvertisesField(string path)
     {
         var schema = InputSchema<TransformInvoiceTool>(nameof(TransformInvoiceTool.TransformInvoiceAsync));
 
         Assert.True(TryResolve(schema, path, out _), $"transform_invoice schema does not expose '{path}'.");
+    }
+
+    // The advanced-details section stays on unless the user asks otherwise: the schema
+    // defaults the switch to true and the description tells the agent why.
+    [Fact]
+    public void TransformInvoice_KeepsAdvancedPropertiesOnByDefault_AndTellsTheAgentWhy()
+    {
+        var method = typeof(TransformInvoiceTool).GetMethod(nameof(TransformInvoiceTool.TransformInvoiceAsync))!;
+        var tool = McpServerTool.Create(method, typeof(TransformInvoiceTool)).ProtocolTool;
+
+        Assert.True(TryResolve(tool.InputSchema, "includeAdvancedProperties", out var node));
+        Assert.True(node.TryGetProperty("default", out var fallback) && fallback.GetBoolean(),
+            "includeAdvancedProperties should default to true in the schema.");
+        Assert.Contains(TransformInvoiceTool.AdvancedPropertiesGuidance, tool.Description);
     }
 
     [Fact]

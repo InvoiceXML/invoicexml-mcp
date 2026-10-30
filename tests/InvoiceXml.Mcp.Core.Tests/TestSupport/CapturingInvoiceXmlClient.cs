@@ -55,6 +55,7 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     public byte[]? LastTransformPdf { get; private set; }
     public PdfLanguage? LastTransformLanguage { get; private set; }
     public bool? LastTransformPreserveOriginalPdf { get; private set; }
+    public bool? LastTransformIncludeAdvancedProperties { get; private set; }
     public string? LastTransformBuyerReference { get; private set; }
 
     public ValidationReportFormat? LastReportFormat { get; private set; }
@@ -203,13 +204,14 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     }
 
     public Task<DocumentArtifact> TransformAsync(
-        InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, string? buyerReference, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
+        InvoiceFormat target, byte[] pdf, PdfLanguage? language, bool preserveOriginalPdf, bool includeAdvancedProperties, string? buyerReference, ValidationLanguage? validationLanguage, CancellationToken cancellationToken = default)
     {
         LastValidationLanguage = validationLanguage;
         LastTransformTarget = target;
         LastTransformPdf = pdf;
         LastTransformLanguage = language;
         LastTransformPreserveOriginalPdf = preserveOriginalPdf;
+        LastTransformIncludeAdvancedProperties = includeAdvancedProperties;
         LastTransformBuyerReference = buyerReference;
         return Task.FromResult(_artifact);
     }

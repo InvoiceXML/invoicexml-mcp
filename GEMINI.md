@@ -56,7 +56,12 @@ their PDF before the invoice is used or sent. Then offer a preview of what was
 read and let them choose: as a PDF (`render_invoice` on the returned XML; for a
 Factur-X / ZUGFeRD result the returned PDF already shows it, unless
 `preserveOriginalPdf` kept the user's own pages) or in the chat (`extract_invoice`
-with target `json`, which takes the returned XML directly).
+with target `json`, which takes the returned XML directly). On a Factur-X /
+ZUGFeRD transform leave `includeAdvancedProperties` on (the default): it ends the
+rendered pages with an "Electronic invoice details" section listing the
+technical properties of the embedded XML, so the user can verify on the pages
+what the XML carries. Turn it off only when the user explicitly asks for a
+classic layout without that section.
 
 ## Supported formats
 
