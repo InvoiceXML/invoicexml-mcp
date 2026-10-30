@@ -88,6 +88,7 @@ public sealed class EmailEmbeddedInvoiceTool
             slug,
             email.To,
             () => _client.EmailEmbeddedAsync(format, inputs!.Pdf, inputs.CiiXml, email, rules, validationLanguage, cancellationToken),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            embedded: true).ConfigureAwait(false);
     }
 }

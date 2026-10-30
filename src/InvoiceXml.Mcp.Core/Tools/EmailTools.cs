@@ -34,8 +34,8 @@ internal static class EmailTools
         "On failure the result has isError=true and a JSON body with { success:false, failureCategory, errors[], guidance }. " +
         "The sender must be on one of the account's verified domains. " + DomainSetupGuidance + " " +
         "If the failure says the account's plan does not include email delivery, point the user to the pricing page. " +
-        "If the call failed with failureCategory 'Network' or 'Server', do not send again on your own: the email " +
-        "may already have gone out, so ask the user first.";
+        "If the call failed with failureCategory 'Network' or 'Server', or was cancelled or timed out, do not send " +
+        "again on your own: the email may already have gone out, so ask the user first.";
 
     private const string UnknownOutcomeSummary = "The outcome of this send is unknown.";
 
@@ -50,6 +50,19 @@ internal static class EmailTools
         "the message on your own: ask the user, and get a new go-ahead for anything that changes. " +
         DomainSetupGuidance;
 
+    private const string EmbeddedValidationGuidance =
+        "Nothing was sent. Each entry in 'errors' has a 'message', 'btCodes' and 'fields'. Do not edit the XML " +
+        "yourself: the PDF has to match it, so tell the user what is wrong and ask for corrected files. Never change " +
+        "the sender, a recipient, the subject or the message on your own either: ask the user, and get a new " +
+        "go-ahead for anything that changes. " +
+        DomainSetupGuidance;
+
+    private const string RateLimitedGuidance =
+        "Nothing was sent. Too many emails or requests are running for this account at the moment. Wait a few " +
+        "seconds and call this tool again with the same input.";
+
+    private const string NothingSentPrefix = "Nothing was sent. ";
+
     private const string ForbiddenGuidance =
         "Nothing was sent, and retrying will not help. Tell the user what the summary says. If the plan does not " +
         "include email delivery, point them to the pricing page; if sending is disabled or paused for the account, " +
@@ -61,7 +74,7 @@ internal static class EmailTools
     /// each category gets its own here; a failure that leaves the outcome open says so.
     /// </summary>
     public static async Task<CallToolResult> SendAsync(
-        string formatSlug, string to, Func<Task<EmailSendResult>> send, CancellationToken ct)
+        string formatSlug, string to, Func<Task<EmailSendResult>> send, CancellationToken ct, bool embedded = false)
     {
         try
         {
@@ -77,15 +90,16 @@ internal static class EmailTools
         }
         catch (InvoiceXmlApiException ex)
         {
-            return ArtifactTools.Failure(formatSlug, ForEmail(ToolFailure.FromApiException(ex)));
+            return ArtifactTools.Failure(formatSlug, ForEmail(ToolFailure.FromApiException(ex), embedded));
         }
         catch (HttpRequestException ex)
         {
             return ArtifactTools.Failure(formatSlug, UnknownOutcome(ex));
         }
-        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        catch (OperationCanceledException ex)
         {
-            // HttpClient timeouts surface as TaskCanceledException with no caller cancellation.
+            // An HttpClient timeout, or the MCP client cancelling the call. The API finishes a
+            // send it has started either way, so this is an open outcome, not a clean stop.
             return ArtifactTools.Failure(formatSlug, UnknownOutcome(ex));
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException)
@@ -95,12 +109,13 @@ internal static class EmailTools
         }
     }
 
-    private static ToolFailure.Translation ForEmail(ToolFailure.Translation failure) => failure.Category switch
+    private static ToolFailure.Translation ForEmail(ToolFailure.Translation failure, bool embedded) => failure.Category switch
     {
-        ToolFailureCategory.Validation => failure with { Guidance = ValidationGuidance },
+        ToolFailureCategory.Validation => failure with { Guidance = embedded ? EmbeddedValidationGuidance : ValidationGuidance },
         ToolFailureCategory.Forbidden => failure with { Guidance = ForbiddenGuidance },
+        ToolFailureCategory.RateLimited => failure with { Guidance = RateLimitedGuidance },
         ToolFailureCategory.Server => failure with { Guidance = UnknownOutcomeGuidance },
-        _ => failure,
+        _ => failure with { Guidance = NothingSentPrefix + failure.Guidance },
     };
 
     private static ToolFailure.Translation UnknownOutcome(Exception ex) =>

@@ -326,6 +326,67 @@ public class EmailToolsTests
         Assert.Contains("https://www.invoicexml.com/account/sending-domains", EmailTools.OutcomeGuidance);
 
     [Fact]
+    public async Task ACancelledCall_SaysTheOutcomeIsUnknown()
+    {
+        var client = new CapturingInvoiceXmlClient { EmailFailure = new OperationCanceledException() };
+        var tool = new EmailInvoiceTool(client);
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        var result = await tool.EmailInvoiceAsync(
+            InvoiceFormat.Zugferd, new InvoiceDocument { InvoiceNumber = "42" }, Email, null, cancelled.Token);
+
+        Assert.True(result.IsError);
+        Assert.Contains("may already have gone out", ((TextContentBlock)result.Content[0]).Text);
+    }
+
+    [Fact]
+    public async Task ARejectedEmbed_AsksForCorrectedFiles_InsteadOfEditingTheXml()
+    {
+        var client = new CapturingInvoiceXmlClient
+        {
+            EmailFailure = new InvoiceXmlApiException(HttpStatusCode.BadRequest, "{\"detail\":\"Validation failed.\",\"errorCode\":4001}"),
+        };
+        var tool = new EmailEmbeddedInvoiceTool(client, new FakeRemoteFileFetcher(SamplePdf));
+
+        var result = await tool.EmailEmbeddedInvoiceAsync(
+            PdfInvoiceFormat.Zugferd, Email, CancellationToken.None,
+            pdfBase64: Convert.ToBase64String(SamplePdf), xml: SampleCii);
+
+        var text = ((TextContentBlock)result.Content[0]).Text;
+        Assert.Contains("ask for corrected files", text);
+        Assert.DoesNotContain("invoiceData", text);
+    }
+
+    [Fact]
+    public async Task ARateLimit_SaysNothingWasSent_AndDoesNotMentionTheirPlan()
+    {
+        var client = new CapturingInvoiceXmlClient { EmailFailure = new InvoiceXmlApiException((HttpStatusCode)429, "{}") };
+        var tool = new EmailInvoiceTool(client);
+
+        var result = await tool.EmailInvoiceAsync(
+            InvoiceFormat.Zugferd, new InvoiceDocument { InvoiceNumber = "42" }, Email, null, CancellationToken.None);
+
+        var text = ((TextContentBlock)result.Content[0]).Text;
+        Assert.Contains("Nothing was sent", text);
+        Assert.DoesNotContain("plan", text);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.RequestEntityTooLarge)]
+    public async Task OtherRefusals_SayNothingWasSent(HttpStatusCode status)
+    {
+        var client = new CapturingInvoiceXmlClient { EmailFailure = new InvoiceXmlApiException(status, "{}") };
+        var tool = new EmailInvoiceTool(client);
+
+        var result = await tool.EmailInvoiceAsync(
+            InvoiceFormat.Zugferd, new InvoiceDocument { InvoiceNumber = "42" }, Email, null, CancellationToken.None);
+
+        Assert.Contains("Nothing was sent", ((TextContentBlock)result.Content[0]).Text);
+    }
+
+    [Fact]
     public void EmailInvoice_NamesTheFieldTheRulesGoIn()
     {
         var tool = McpServerTool.Create(typeof(EmailInvoiceTool).GetMethod(nameof(EmailInvoiceTool.EmailInvoiceAsync))!, typeof(EmailInvoiceTool));
