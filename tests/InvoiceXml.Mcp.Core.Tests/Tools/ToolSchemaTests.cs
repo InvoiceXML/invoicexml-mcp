@@ -133,6 +133,20 @@ public class ToolSchemaTests
         Assert.Contains(TransformInvoiceTool.AiReviewGuidance, description);
     }
 
+    // A read whose amounts do not add up (4024) is the one failure a retry only repeats and bills
+    // again, so the description says so and points at create_invoice with the corrected invoiceData.
+    [Fact]
+    public void TransformInvoice_TellsTheAgentNotToRetryATotalsMismatch()
+    {
+        var method = typeof(TransformInvoiceTool).GetMethod(nameof(TransformInvoiceTool.TransformInvoiceAsync))!;
+        var description = McpServerTool.Create(method, typeof(TransformInvoiceTool)).ProtocolTool.Description;
+
+        Assert.Contains(TransformInvoiceTool.TotalsMismatchGuidance, description);
+        Assert.Contains("4024", TransformInvoiceTool.TotalsMismatchGuidance);
+        Assert.Contains("DO NOT RETRY transform_invoice", TransformInvoiceTool.TotalsMismatchGuidance);
+        Assert.Contains("call create_invoice", TransformInvoiceTool.TotalsMismatchGuidance);
+    }
+
     [Theory]
     [InlineData(typeof(CreateInvoiceTool), nameof(CreateInvoiceTool.CreateInvoiceAsync))]
     [InlineData(typeof(ValidatePdfInvoiceTool), nameof(ValidatePdfInvoiceTool.ValidatePdfAsync))]

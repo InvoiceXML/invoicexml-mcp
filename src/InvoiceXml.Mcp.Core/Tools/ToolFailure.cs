@@ -44,6 +44,31 @@ public enum ToolFailureCategory
 /// </summary>
 internal static class ToolFailure
 {
+    /// <summary>
+    /// The API's error code for an AI read whose amounts do not add up (<c>/v1/transform</c>
+    /// only): the lines, allowances, charges and VAT read from the PDF differ from the total it
+    /// prints, or no total or no lines could be read. Billed, nothing produced, the document as
+    /// read comes back in <c>invoiceData</c>.
+    /// </summary>
+    public const int TotalsMismatchErrorCode = 4024;
+
+    /// <summary>
+    /// What the agent does with a 4024: never the same transform again, since the read repeats
+    /// and each attempt costs a credit, but the invoice built from corrected values through
+    /// <c>create_invoice</c>. Carried as the failure's 'guidance' and in the transform tool's
+    /// description; pinned by the schema tests.
+    /// </summary>
+    public const string TotalsMismatchGuidance =
+        "errorCode 4024 (rule TOTALS-MISMATCH): the AI read of this PDF does not add up. The lines, allowances, " +
+        "charges and VAT it read differ from the total the PDF prints, or no total or no lines could be read, " +
+        "so the API produced nothing rather than an invoice with a wrong total. DO NOT RETRY transform_invoice " +
+        "with the same PDF: it reads the PDF the same way, fails the same way and uses a credit every time. " +
+        "Build the invoice from corrected values instead: 'invoiceData' in this failure is the document as read " +
+        "(the same JSON /v1/parse returns for the PDF), and the finding in 'errors' names the two amounts. Show " +
+        "the user the lines and totals that were read, ask them for the correct amounts from the source PDF " +
+        "(usually a missing, doubled or misread line), merge the corrections into 'invoiceData' and call " +
+        "create_invoice with that document and the same target format.";
+
     public readonly record struct Translation(
         ToolFailureCategory Category,
         int? StatusCode,
@@ -68,7 +93,7 @@ internal static class ToolFailure
             Category: category,
             StatusCode: status,
             Summary: summary,
-            Guidance: GuidanceFor(category),
+            Guidance: problem?.ErrorCode == TotalsMismatchErrorCode ? TotalsMismatchGuidance : GuidanceFor(category),
             Errors: problem?.Errors,
             Problem: problem);
     }

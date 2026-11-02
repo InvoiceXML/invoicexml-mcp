@@ -1,6 +1,9 @@
+using System.Net;
 using System.Text;
+using System.Text.Json;
 using InvoiceXml.Mcp.Core.Enums;
 using InvoiceXml.Mcp.Core.Models;
+using InvoiceXml.Mcp.Core.Services;
 using InvoiceXml.Mcp.Core.Tests.TestSupport;
 using InvoiceXml.Mcp.Core.Tools;
 using ModelContextProtocol.Protocol;
@@ -120,6 +123,69 @@ public class TransformInvoiceToolTests
         var summary = Assert.IsType<TextContentBlock>(result.Content[0]);
         Assert.EndsWith(TransformInvoiceTool.ReviewReminder, summary.Text);
         Assert.Contains("<CrossIndustryInvoice/>", Assert.IsType<TextContentBlock>(result.Content[1]).Text);
+    }
+
+    // The API refuses a read whose amounts do not add up (4024) with the document as read. The
+    // failure keeps the Validation category (a 400 with invoiceData, which the recovery text
+    // keys on) but carries the guidance that forbids a retry.
+    [Fact]
+    public async Task TotalsMismatch_IsNotToBeRetried_AndHandsTheReadDocumentBack()
+    {
+        const string problemJson = """
+            {
+              "title": "Totals do not match",
+              "status": 400,
+              "detail": "The lines, allowances, charges and VAT read from the document add up to 18802.12 EUR, but the document prints a total with VAT of 39993.04 EUR.",
+              "valid": false,
+              "errorCode": 4024,
+              "errors": [
+                {
+                  "rule": "TOTALS-MISMATCH",
+                  "message": "The lines, allowances, charges and VAT read from the document add up to 18802.12 EUR, but the document prints a total with VAT of 39993.04 EUR.",
+                  "btCodes": ["BT-112"],
+                  "fields": [],
+                  "raw": "printed grand total: 39993.04, computed: 18802.12"
+                }
+              ],
+              "invoiceData": { "invoiceNumber": "RE-2026-0001", "currency": "EUR" }
+            }
+            """;
+        var client = new CapturingInvoiceXmlClient
+        {
+            TransformFailure = new InvoiceXmlApiException(HttpStatusCode.BadRequest, problemJson),
+        };
+
+        var result = await Build(client).TransformInvoiceAsync(
+            InvoiceFormat.Ubl, CancellationToken.None, pdfUrl: "https://example.com/invoice.pdf");
+
+        Assert.True(result.IsError);
+        var body = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("\"failureCategory\":\"Validation\"", body);
+        Assert.Contains("\"statusCode\":400", body);
+        Assert.Contains("TOTALS-MISMATCH", body);
+        Assert.Contains("RE-2026-0001", body);
+        using var json = JsonDocument.Parse(body);
+        Assert.Equal(ToolFailure.TotalsMismatchGuidance, json.RootElement.GetProperty("guidance").GetString());
+    }
+
+    // The 4024 guidance is that code's alone: any other 400 keeps the general validation text.
+    [Fact]
+    public async Task OtherValidationFailures_KeepTheGeneralGuidance()
+    {
+        const string problemJson = """
+            { "title": "Validation failed", "status": 400, "valid": false, "errorCode": 4001, "errors": [] }
+            """;
+        var client = new CapturingInvoiceXmlClient
+        {
+            TransformFailure = new InvoiceXmlApiException(HttpStatusCode.BadRequest, problemJson),
+        };
+
+        var result = await Build(client).TransformInvoiceAsync(
+            InvoiceFormat.Ubl, CancellationToken.None, pdfUrl: "https://example.com/invoice.pdf");
+
+        var body = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Fix the indicated fields", body);
+        Assert.DoesNotContain("DO NOT RETRY", body);
     }
 
     [Fact]

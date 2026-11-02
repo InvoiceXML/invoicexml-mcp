@@ -110,6 +110,9 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
     /// <summary>When set, the email methods fail with this instead of answering.</summary>
     public Exception? EmailFailure { get; init; }
 
+    /// <summary>When set, the transform method fails with this after recording its arguments.</summary>
+    public Exception? TransformFailure { get; init; }
+
     public Task<EmailSendResult> EmailInvoiceAsync(
         InvoiceFormat format, InvoiceDocument invoice, CreateInvoiceOptions? options, EmailMessage email, CancellationToken cancellationToken = default)
     {
@@ -243,6 +246,8 @@ internal sealed class CapturingInvoiceXmlClient : IInvoiceXmlClient
         LastTransformPreserveOriginalPdf = preserveOriginalPdf;
         LastTransformIncludeAdvancedProperties = includeAdvancedProperties;
         LastTransformBuyerReference = buyerReference;
-        return Task.FromResult(_artifact);
+        return TransformFailure is { } failure
+            ? Task.FromException<DocumentArtifact>(failure)
+            : Task.FromResult(_artifact);
     }
 }

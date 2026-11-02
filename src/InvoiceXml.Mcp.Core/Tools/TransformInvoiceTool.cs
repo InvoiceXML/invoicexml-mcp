@@ -58,6 +58,13 @@ public sealed class TransformInvoiceTool
         "the XML. Turn it off only when the user explicitly asks for a classic layout without that section. It " +
         "has no effect with preserveOriginalPdf, which keeps the uploaded pages as they are.";
 
+    /// <summary>
+    /// The one failure that must not be retried: a read whose amounts do not add up (API error
+    /// code 4024). Same text as the failure's guidance, so the agent meets it before the call too.
+    /// Part of the tool description; pinned by the schema tests.
+    /// </summary>
+    public const string TotalsMismatchGuidance = "IF THE FAILURE HAS " + ToolFailure.TotalsMismatchGuidance;
+
     /// <summary>The reminder every success summary ends with, so the warning is not left to the description alone.</summary>
     public const string ReviewReminder =
         "The invoice data was read by AI: tell the user to check it against the source PDF before the invoice is " +
@@ -111,7 +118,9 @@ public sealed class TransformInvoiceTool
         "invoice this tool managed to extract from the PDF. Do NOT just retry transform_invoice with the same PDF " +
         "(it re-extracts and fails the same way), and this tool has no field arguments to push corrections into. " +
         "Instead tell the user which fields in 'errors' are missing or invalid; once they supply the values, merge " +
-        "them into the 'invoiceData' object and call create_invoice with that document and this same target format.")]
+        "them into the 'invoiceData' object and call create_invoice with that document and this same target format.\n" +
+        "\n" +
+        TotalsMismatchGuidance)]
     public async Task<CallToolResult> TransformInvoiceAsync(
         [Description("Target format. One of: ubl, cii, xrechnung, facturx, zugferd.")]
         InvoiceFormat targetFormat,
