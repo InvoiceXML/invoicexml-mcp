@@ -31,4 +31,7 @@ public enum InvoiceTypeCode
 
     /// <summary>Self-billed credit note (UNTDID 261): credits a self-billed invoice.</summary>
     SelfBilledCreditNote = 261,
+
+    /// <summary>Self-billed prepayment invoice (UNTDID 500): a prepayment request the buyer issues.</summary>
+    SelfBilledPrepaymentInvoice = 500,
 }

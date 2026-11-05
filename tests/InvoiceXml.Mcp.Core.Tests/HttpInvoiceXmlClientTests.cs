@@ -95,8 +95,10 @@ public class HttpInvoiceXmlClientTests
         Assert.Contains("\"rules\":[\"br-fr\"]", handler.LastRequestBody);
     }
 
-    [Fact]
-    public async Task CreateInvoiceAsync_SendsSelfBilledCreditNoteTypeCodeByName()
+    [Theory]
+    [InlineData(InvoiceTypeCode.SelfBilledCreditNote, "SelfBilledCreditNote")]
+    [InlineData(InvoiceTypeCode.SelfBilledPrepaymentInvoice, "SelfBilledPrepaymentInvoice")]
+    public async Task CreateInvoiceAsync_SendsSelfBilledTypeCodesByName(InvoiceTypeCode typeCode, string wireName)
     {
         var pdf = new byte[] { 0x25, 0x50, 0x44, 0x46 }; // "%PDF"
         var handler = new StubHttpMessageHandler(StubHttpMessageHandler.Binary(
@@ -105,11 +107,11 @@ public class HttpInvoiceXmlClientTests
 
         await client.CreateInvoiceAsync(
             InvoiceFormat.Zugferd,
-            new InvoiceDocument { InvoiceNumber = "GS-7", Currency = "EUR", TypeCode = InvoiceTypeCode.SelfBilledCreditNote },
+            new InvoiceDocument { InvoiceNumber = "GS-7", Currency = "EUR", TypeCode = typeCode },
             options: null,
             CancellationToken.None);
 
-        Assert.Contains("\"typeCode\":\"SelfBilledCreditNote\"", handler.LastRequestBody);
+        Assert.Contains($"\"typeCode\":\"{wireName}\"", handler.LastRequestBody);
     }
 
     [Fact]

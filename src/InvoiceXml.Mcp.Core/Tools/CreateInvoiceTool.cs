@@ -59,8 +59,10 @@ public sealed class CreateInvoiceTool
         "validates it against the matching credit note rules; the CII-based formats carry the type code in the " +
         "same CrossIndustryInvoice structure. " +
         "To credit a self-billed invoice (typeCode 'SelfBilledInvoice', UNTDID 389), use typeCode " +
-        "'SelfBilledCreditNote' (UNTDID 261) the same way. Peppol BIS does not accept 261, so for format 'ubl' " +
-        "set options.profile to 'en16931'. " +
+        "'SelfBilledCreditNote' (UNTDID 261) the same way. A self-billed prepayment request uses typeCode " +
+        "'SelfBilledPrepaymentInvoice' (UNTDID 500); the final self-billed invoice deducts the prepayments " +
+        "already received in totals.paidAmount. Peppol BIS accepts none of the self-billed codes (389, 500, 261), " +
+        "so for format 'ubl' set options.profile to 'en16931'. " +
         "\n\n" +
         "Fill paymentDetails (IBAN, payment means) whenever the buyer is expected to pay, and use notes, delivery, " +
         "invoicingPeriod, allowances and charges when the source invoice has them. " +
