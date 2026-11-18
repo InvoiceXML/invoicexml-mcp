@@ -46,27 +46,24 @@ internal sealed class WelcomePageMiddleware
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <meta name="robots" content="noindex">
           <title>InvoiceXML MCP Server</title>
+          <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96">
+          <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
+          <link rel="shortcut icon" href="/favicon/favicon.ico">
+          <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
           <style>
+            /* The InvoiceXML website's dark teal scheme (its hero, navbar and footer):
+               brand teal surfaces with the mint accent, whatever the visitor's theme. */
             :root {
-              color-scheme: light dark;
-              --bg: #fafaf9;
-              --fg: #1a202c;
-              --muted: #64748b;
-              --card: #ffffff;
-              --border: #e2e8f0;
-              --accent: #0f766e;
-              --code-bg: #f1f5f9;
-            }
-            @media (prefers-color-scheme: dark) {
-              :root {
-                --bg: #0f172a;
-                --fg: #e2e8f0;
-                --muted: #94a3b8;
-                --card: #1e293b;
-                --border: #334155;
-                --accent: #5eead4;
-                --code-bg: #0b1220;
-              }
+              color-scheme: dark;
+              --bg: #102a2e;
+              --fg: #ffffff;
+              --muted: #9db3b7;
+              --teal: #173a40;
+              --border: rgba(255, 255, 255, 0.1);
+              --mint: #9fe0a8;
+              --chip-bg: rgba(255, 255, 255, 0.05);
+              --chip-border: rgba(255, 255, 255, 0.14);
+              --pre-fg: #e6eeee;
             }
             * { box-sizing: border-box; }
             body {
@@ -77,28 +74,42 @@ internal sealed class WelcomePageMiddleware
               font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }
             main { max-width: 720px; margin: 0 auto; }
+            .logo { display: inline-block; margin-bottom: 2.5rem; }
+            .logo img { display: block; height: 28px; width: auto; }
             h1 { margin: 0 0 0.5rem; font-size: 1.75rem; letter-spacing: -0.01em; }
             .lede { margin: 0 0 2rem; color: var(--muted); font-size: 1.0625rem; }
             h2 { margin: 2rem 0 0.75rem; font-size: 1.0625rem; letter-spacing: -0.005em; }
             ul { padding-left: 1.25rem; margin: 0 0 1rem; }
             li { margin-bottom: 0.5rem; }
             code, pre { font-family: "SF Mono", Monaco, Consolas, monospace; font-size: 0.875rem; }
-            code { background: var(--code-bg); padding: 0.125rem 0.375rem; border-radius: 4px; }
+            code {
+              background: var(--chip-bg);
+              border: 1px solid var(--chip-border);
+              color: var(--mint);
+              padding: 0.125rem 0.375rem;
+              border-radius: 4px;
+            }
             pre {
-              background: var(--code-bg);
+              background: var(--bg);
+              color: var(--pre-fg);
               padding: 0.875rem 1rem;
               border-radius: 6px;
               border: 1px solid var(--border);
               overflow-x: auto;
               margin: 0.5rem 0 0;
             }
-            pre code { background: none; padding: 0; }
-            a { color: var(--accent); text-decoration: none; }
-            a:hover { text-decoration: underline; }
+            pre code { background: none; border: 0; color: inherit; padding: 0; }
+            a {
+              color: var(--mint);
+              font-weight: 600;
+              text-decoration: underline;
+              text-underline-offset: 0.2em;
+            }
+            a:hover { text-decoration-thickness: 2px; }
             .pill {
               display: inline-block;
-              background: var(--accent);
-              color: var(--bg);
+              background: var(--mint);
+              color: var(--teal);
               padding: 0.125rem 0.5rem;
               border-radius: 999px;
               font-size: 0.6875rem;
@@ -108,7 +119,7 @@ internal sealed class WelcomePageMiddleware
               vertical-align: 0.2em;
             }
             .card {
-              background: var(--card);
+              background: var(--teal);
               border: 1px solid var(--border);
               border-radius: 8px;
               padding: 1rem 1.25rem;
@@ -125,6 +136,9 @@ internal sealed class WelcomePageMiddleware
         </head>
         <body>
           <main>
+            <a class="logo" href="https://www.invoicexml.com">
+              <img src="/img/logo.svg" alt="InvoiceXML">
+            </a>
             <h1>InvoiceXML MCP Server <span class="pill">running</span></h1>
             <p class="lede">
               This is a Model Context Protocol server, not a website. Connect it to an AI agent
@@ -156,8 +170,19 @@ internal sealed class WelcomePageMiddleware
             <h2>What this server exposes</h2>
             <ul>
               <li><code>create_invoice</code>: build a UBL, CII, XRechnung, Factur-X or ZUGFeRD invoice from structured fields.</li>
+              <li><code>transform_invoice</code>: turn a regular PDF invoice into a compliant e-invoice with AI.</li>
+              <li><code>convert_invoice</code>: convert an invoice between UBL, CII, XRechnung, Factur-X and ZUGFeRD.</li>
               <li><code>validate_xml_invoice</code>: validate UBL, CII or XRechnung XML against EN 16931 + Schematron.</li>
               <li><code>validate_pdf_invoice</code>: validate the embedded XML of a Factur-X or ZUGFeRD hybrid PDF.</li>
+              <li><code>render_validation_report</code>: get the validation result as a printable PDF compliance report.</li>
+              <li><code>render_invoice</code>: render UBL, CII or XRechnung XML as a human-readable PDF.</li>
+              <li><code>extract_invoice</code>: pull the structured data or the embedded XML out of a Factur-X or ZUGFeRD PDF.</li>
+              <li><code>embed_invoice</code>: combine a PDF and a CII XML into a Factur-X or ZUGFeRD hybrid PDF.</li>
+              <li><code>email_invoice</code>: create an invoice and email it from your own verified domain.</li>
+              <li><code>email_embedded_invoice</code>: embed XML into a PDF and email the result from your own verified domain.</li>
+              <li><code>create_order</code>: build an Order-X purchase order as a hybrid PDF or Cross-Industry Order XML.</li>
+              <li><code>validate_order</code>: validate an Order-X PDF or Cross-Industry Order XML.</li>
+              <li><code>get_account</code>: check your plan and remaining credits.</li>
             </ul>
 
             <p class="foot">

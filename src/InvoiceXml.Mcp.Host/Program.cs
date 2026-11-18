@@ -59,6 +59,9 @@ builder.Services
 
 var app = builder.Build();
 
+// The welcome page's favicon and logo (wwwroot). Nothing else is served from disk.
+app.UseStaticFiles();
+
 // GET / serves a friendly HTML welcome. The MCP endpoint also lives at /,
 // but it only answers POSTs (JSON-RPC) — so the welcome middleware short-circuits
 // browser GETs before endpoint routing ever sees them. POSTs fall through to MapMcp.
