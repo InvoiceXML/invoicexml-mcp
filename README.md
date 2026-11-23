@@ -130,7 +130,10 @@ Environment variable equivalents (double underscore = nesting):
 When `Mcp:AuthMode=OAuth` the host stops accepting a static API key and instead:
 
 1. Returns **401** with `WWW-Authenticate: Bearer resource_metadata="…"` for any
-   `POST /` that has no Bearer token.
+   `POST /` that has no Bearer token, except the discovery calls (`initialize`,
+   `notifications/initialized`, `ping`, `tools/list`). Those are answered without
+   a token, so a client or a registry can read the tool list before the user
+   signs in. Every tool call needs the token.
 2. Serves `GET /.well-known/oauth-protected-resource` pointing MCP clients at
    `invoicexml.com` as the authorization server.
 3. Forwards the inbound Bearer token verbatim on every outbound call to the
@@ -140,7 +143,8 @@ When `Mcp:AuthMode=OAuth` the host stops accepting a static API key and instead:
 The dance an MCP client performs:
 
 ```
-client → MCP  POST /                           → 401 + resource_metadata
+client → MCP  POST /  initialize, tools/list   → 200, no token needed
+client → MCP  POST /  tools/call               → 401 + resource_metadata
 client → /.well-known/oauth-protected-resource → { authorization_servers: [invoicexml.com] }
 client → invoicexml.com/.well-known/oauth-authorization-server
                                                → { authorize, token, register endpoints }
