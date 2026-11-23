@@ -15,6 +15,20 @@ environment variable:
 Both run the same binary; only the configuration differs. The repository is
 platform-independent — it knows nothing about where or how you host it.
 
+## Using it from ChatGPT
+
+Add `https://mcp.invoicexml.com` as a custom connector in ChatGPT and sign in when
+asked.
+
+The first time a tool returns a PDF (a Factur-X or ZUGFeRD invoice, an Order-X
+order, a rendered preview or a validation report), ChatGPT asks
+"Allow file materialization?". Open the menu on the **Allow once** button and choose
+**Allow for this session**. ChatGPT then delivers every PDF created in that chat.
+
+If a request that creates a PDF ends with "The previous Code Mode continuation is no
+longer available" or "Error in message stream", the document was created but ChatGPT
+did not deliver it. Choose **Allow for this session** and ask again.
+
 ## Architecture
 
 ```

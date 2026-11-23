@@ -66,7 +66,12 @@ public static class McpServerBuilderExtensions
         "\n" +
         "Working with files: prefer passing a public https:// URL (pdfUrl / xmlUrl) and let the server " +
         "fetch the file. Only ever use the real bytes or text of a document. Never reconstruct, guess, or " +
-        "synthesize file contents; if you cannot read an uploaded file, ask the user for a URL or to paste it.";
+        "synthesize file contents; if you cannot read an uploaded file, ask the user for a URL or to paste it.\n" +
+        "\n" +
+        "PDF results in ChatGPT: ChatGPT asks the user to approve file attachments before it delivers a PDF. " +
+        "Before the first call that returns a PDF, tell the user to open the menu on the 'Allow once' button and " +
+        "choose 'Allow for this session'. If such a call ends with a lost continuation or a message stream error, " +
+        "the document was created: tell the user to choose that option, and ask before creating it again.";
 
     /// <summary>
     /// The InvoiceXML brand mark as a self-contained <c>data:</c> URI (base64 SVG),
