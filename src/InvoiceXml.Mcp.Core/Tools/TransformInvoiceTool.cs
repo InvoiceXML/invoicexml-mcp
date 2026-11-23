@@ -93,7 +93,7 @@ public sealed class TransformInvoiceTool
         "\n" +
         "Provide the source PDF via EXACTLY ONE of these inputs:\n" +
         "• pdfUrl: a public https:// URL to the PDF; the server downloads it. PREFER THIS whenever a URL exists.\n" +
-        "• pdfBase64: the PDF as base64. Only practical for small files; larger base64 gets corrupted in a tool call.\n" +
+        "• pdfBase64: the PDF as base64. " + FileInputResolver.Base64Guidance + "\n" +
         "If you set neither or both, the result is an input error explaining what to fix.\n" +
         "\n" +
         "For a facturx / zugferd target, 'language' sets the language of the rendered PDF pages and of the default " +
@@ -130,7 +130,7 @@ public sealed class TransformInvoiceTool
         [Description("A public https:// URL to the source PDF; the server fetches it. Provide exactly one of pdfUrl / pdfBase64.")]
         string? pdfUrl = null,
 
-        [Description("The source PDF as base64 (small files only). Provide exactly one of pdfUrl / pdfBase64.")]
+        [Description("The source PDF as base64 (" + FileInputResolver.Base64ParameterNote + "). Provide exactly one of pdfUrl / pdfBase64.")]
         string? pdfBase64 = null,
 
         [Description(

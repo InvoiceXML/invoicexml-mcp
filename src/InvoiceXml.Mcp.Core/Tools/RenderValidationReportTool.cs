@@ -69,7 +69,7 @@ public sealed class RenderValidationReportTool
         [Description("For an XML document (ubl/cii/xrechnung, or an order-x CIO XML): a public https:// URL to the XML.")]
         string? xmlUrl = null,
 
-        [Description("For a hybrid PDF (facturx/zugferd, or an order-x PDF): the PDF as base64 (small files only).")]
+        [Description("For a hybrid PDF (facturx/zugferd, or an order-x PDF): the PDF as base64 (" + FileInputResolver.Base64ParameterNote + ").")]
         string? pdfBase64 = null,
 
         [Description("For a hybrid PDF (facturx/zugferd, or an order-x PDF): a public https:// URL to the PDF.")]

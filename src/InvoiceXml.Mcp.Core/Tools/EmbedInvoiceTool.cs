@@ -31,7 +31,7 @@ public sealed class EmbedInvoiceTool
         "The XML MUST be a UN/CEFACT Cross Industry Invoice (CII) document; UBL is not accepted here " +
         "(convert it first with 'convert_invoice' ubl -> cii). " +
         "\n\n" +
-        "Provide the PDF via EXACTLY ONE of: pdfUrl (preferred) or pdfBase64 (small files only).\n" +
+        "Provide the PDF via EXACTLY ONE of: pdfUrl (preferred) or pdfBase64. " + FileInputResolver.Base64Guidance + "\n" +
         "Provide the CII XML via EXACTLY ONE of: xml (text) or xmlUrl.\n" +
         "If a required pair is empty or has both set, the result is an input error explaining what to fix.\n" +
         "\n" +
@@ -53,7 +53,7 @@ public sealed class EmbedInvoiceTool
         [Description("A public https:// URL to the PDF. Provide exactly one of pdfUrl / pdfBase64.")]
         string? pdfUrl = null,
 
-        [Description("The PDF as base64 (small files only). Provide exactly one of pdfUrl / pdfBase64.")]
+        [Description("The PDF as base64 (" + FileInputResolver.Base64ParameterNote + "). Provide exactly one of pdfUrl / pdfBase64.")]
         string? pdfBase64 = null,
 
         [Description("The CII invoice XML as plain text. Provide exactly one of xml / xmlUrl.")]

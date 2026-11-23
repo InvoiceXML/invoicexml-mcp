@@ -93,7 +93,7 @@ public sealed class ConvertInvoiceTool
         [Description("For an XML source (ubl/cii/xrechnung): a public https:// URL to the XML.")]
         string? xmlUrl = null,
 
-        [Description("For a hybrid-PDF source (facturx/zugferd): the source PDF as base64 (small files only).")]
+        [Description("For a hybrid-PDF source (facturx/zugferd): the source PDF as base64 (" + FileInputResolver.Base64ParameterNote + ").")]
         string? pdfBase64 = null,
 
         [Description("For a hybrid-PDF source (facturx/zugferd): a public https:// URL to the PDF.")]

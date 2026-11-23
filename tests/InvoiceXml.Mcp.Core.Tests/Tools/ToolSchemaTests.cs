@@ -160,6 +160,41 @@ public class ToolSchemaTests
         Assert.Contains(ExtraRules.FacturXDefaultGuidance, description);
     }
 
+    // Base64 only fails when a model writes it out by hand, so no tool may tell an agent that
+    // calls tools from code to hold back a larger file. Covers every tool in the assembly, so a
+    // new *Base64 parameter cannot ship with its own wording.
+    [Fact]
+    public void EveryBase64Parameter_CarriesTheSharedSizeNote()
+    {
+        var base64Parameters = typeof(CreateInvoiceTool).Assembly.GetTypes()
+            .SelectMany(type => type.GetMethods().Select(method => (Type: type, Method: method)))
+            .Where(tool => tool.Method.GetCustomAttributes(typeof(McpServerToolAttribute), inherit: false).Length > 0)
+            .SelectMany(tool => McpServerTool.Create(tool.Method, tool.Type).ProtocolTool.InputSchema
+                .GetProperty("properties").EnumerateObject()
+                .Where(property => property.Name.EndsWith("Base64", StringComparison.Ordinal))
+                .Select(property => (Tool: tool.Type.Name, property.Name,
+                    Description: property.Value.GetProperty("description").GetString())))
+            .ToList();
+
+        Assert.NotEmpty(base64Parameters);
+        Assert.All(base64Parameters, parameter =>
+            Assert.Contains(FileInputResolver.Base64ParameterNote, parameter.Description));
+    }
+
+    [Theory]
+    [InlineData(typeof(ValidatePdfInvoiceTool), nameof(ValidatePdfInvoiceTool.ValidatePdfAsync))]
+    [InlineData(typeof(ExtractInvoiceTool), nameof(ExtractInvoiceTool.ExtractInvoiceAsync))]
+    [InlineData(typeof(TransformInvoiceTool), nameof(TransformInvoiceTool.TransformInvoiceAsync))]
+    [InlineData(typeof(ValidateOrderTool), nameof(ValidateOrderTool.ValidateOrderAsync))]
+    [InlineData(typeof(EmbedInvoiceTool), nameof(EmbedInvoiceTool.EmbedInvoiceAsync))]
+    public void ToolsThatExplainTheirFileInputs_SayWhenBase64IsSafe(Type toolType, string methodName)
+    {
+        var method = toolType.GetMethod(methodName)!;
+        var description = McpServerTool.Create(method, toolType).ProtocolTool.Description;
+
+        Assert.Contains(FileInputResolver.Base64Guidance, description);
+    }
+
     internal static JsonElement InputSchema<TTool>(string methodName)
     {
         var method = typeof(TTool).GetMethod(methodName)

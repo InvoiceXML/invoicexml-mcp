@@ -33,8 +33,7 @@ public sealed class ValidatePdfInvoiceTool
         "\n\n" +
         "Provide the PDF via EXACTLY ONE of these inputs:\n" +
         "• pdfUrl: a public https:// URL to the PDF; the server downloads it. PREFER THIS whenever a URL exists.\n" +
-        "• pdfBase64: the PDF as base64. Only practical for small files (a few tens of KB); larger base64 gets " +
-        "corrupted when written into a tool call, so use a URL instead.\n" +
+        "• pdfBase64: the PDF as base64. " + FileInputResolver.Base64Guidance + "\n" +
         "If you set neither or both, the result is valid=false with an INPUT-… error explaining what to fix.\n" +
         "\n" +
         "rules ['br-fr'] also checks the French e-invoicing rules (format 'facturx' only). " +
@@ -65,7 +64,7 @@ public sealed class ValidatePdfInvoiceTool
         [Description("A public https:// URL to the PDF; the server fetches it. Provide exactly one of pdfUrl / pdfBase64.")]
         string? pdfUrl = null,
 
-        [Description("The PDF as base64 (small files only). Provide exactly one of pdfUrl / pdfBase64.")]
+        [Description("The PDF as base64 (" + FileInputResolver.Base64ParameterNote + "). Provide exactly one of pdfUrl / pdfBase64.")]
         string? pdfBase64 = null,
 
         [Description(ExtraRules.ParameterDescription + " Format 'facturx' only.")]

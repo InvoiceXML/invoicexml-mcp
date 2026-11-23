@@ -1,4 +1,5 @@
 using InvoiceXml.Mcp.Core.Extensions;
+using InvoiceXml.Mcp.Core.Tools;
 
 namespace InvoiceXml.Mcp.Core.Tests;
 
@@ -17,5 +18,11 @@ public class ServerInstructionsTests
         Assert.Contains("PDF results in ChatGPT", instructions);
         Assert.Contains("'Allow for this session'", instructions);
         Assert.Contains("ask before creating it again", instructions);
+    }
+
+    [Fact]
+    public void SaysWhenBase64IsASafeWayToSendAFile()
+    {
+        Assert.Contains(FileInputResolver.Base64Guidance, McpServerBuilderExtensions.ServerInstructions);
     }
 }

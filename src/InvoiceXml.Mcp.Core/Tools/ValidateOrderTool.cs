@@ -32,7 +32,7 @@ public sealed class ValidateOrderTool
         "COMFORT with an advisory warning. Use validate_xml_invoice / validate_pdf_invoice for invoices, not this tool. " +
         "\n\n" +
         "Provide the order via EXACTLY ONE of these inputs:\n" +
-        "• pdfUrl or pdfBase64 for an Order-X PDF (prefer pdfUrl; base64 only for small files).\n" +
+        "• pdfUrl or pdfBase64 for an Order-X PDF (prefer pdfUrl). " + FileInputResolver.Base64Guidance + "\n" +
         "• xmlUrl or xml for a plain Cross-Industry Order XML.\n" +
         "If you set none or more than one, the result is valid=false with an INPUT-… error explaining what to fix.\n" +
         "\n" +
@@ -48,7 +48,7 @@ public sealed class ValidateOrderTool
         [Description("A public https:// URL to an Order-X PDF. Provide exactly one input.")]
         string? pdfUrl = null,
 
-        [Description("An Order-X PDF as base64 (small files only). Provide exactly one input.")]
+        [Description("An Order-X PDF as base64 (" + FileInputResolver.Base64ParameterNote + "). Provide exactly one input.")]
         string? pdfBase64 = null,
 
         [Description("A public https:// URL to a Cross-Industry Order XML. Provide exactly one input.")]

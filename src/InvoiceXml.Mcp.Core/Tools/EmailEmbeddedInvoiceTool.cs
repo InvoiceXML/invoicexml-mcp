@@ -34,7 +34,7 @@ public sealed class EmailEmbeddedInvoiceTool
         "rules ['br-fr'] also checks the French e-invoicing rules (format 'facturx' only). " +
         ExtraRules.FacturXDefaultGuidance + "\n" +
         "\n" +
-        "Provide the PDF via EXACTLY ONE of: pdfUrl (preferred) or pdfBase64 (small files only).\n" +
+        "Provide the PDF via EXACTLY ONE of: pdfUrl (preferred) or pdfBase64. " + FileInputResolver.Base64Guidance + "\n" +
         "Provide the CII XML via EXACTLY ONE of: xml (text) or xmlUrl.\n" +
         "\n" +
         "Only use the ACTUAL bytes/text of the files. Never reconstruct, guess, or synthesize content. " +
@@ -55,7 +55,7 @@ public sealed class EmailEmbeddedInvoiceTool
         [Description("A public https:// URL to the PDF. Provide exactly one of pdfUrl / pdfBase64.")]
         string? pdfUrl = null,
 
-        [Description("The PDF as base64 (small files only). Provide exactly one of pdfUrl / pdfBase64.")]
+        [Description("The PDF as base64 (" + FileInputResolver.Base64ParameterNote + "). Provide exactly one of pdfUrl / pdfBase64.")]
         string? pdfBase64 = null,
 
         [Description("The CII invoice XML as plain text. Provide exactly one of xml / xmlUrl.")]

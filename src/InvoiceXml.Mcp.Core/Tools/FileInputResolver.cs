@@ -14,6 +14,21 @@ namespace InvoiceXml.Mcp.Core.Tools;
 internal static class FileInputResolver
 {
     /// <summary>
+    /// Agent guidance on when base64 is a safe way to send a file, shared so every tool says
+    /// the same. Base64 that a model writes out character by character gets corrupted beyond a
+    /// few tens of KB. An agent that calls tools from code passes the bytes of the real file
+    /// intact at any size, so only the written-out case is limited.
+    /// </summary>
+    public const string Base64Guidance =
+        "Base64 is reliable at any size when code sends it: if you call tools from a script or sandbox that holds " +
+        "the file, read the real bytes there and pass the base64 as a value. Only write base64 out yourself for a " +
+        "small file (a few tens of KB); longer base64 written out by a model gets corrupted, so use a URL then.";
+
+    /// <summary>The short form of <see cref="Base64Guidance"/> for the description of a base64 parameter.</summary>
+    public const string Base64ParameterNote =
+        "any size when code sends the real file's bytes; written out by you, small files only";
+
+    /// <summary>
     /// Verifies that exactly one of the supplied modes is set. Returns
     /// <see langword="null"/> when exactly one is present, otherwise a
     /// <see cref="ValidationResult"/> describing the problem.

@@ -66,7 +66,8 @@ public static class McpServerBuilderExtensions
         "\n" +
         "Working with files: prefer passing a public https:// URL (pdfUrl / xmlUrl) and let the server " +
         "fetch the file. Only ever use the real bytes or text of a document. Never reconstruct, guess, or " +
-        "synthesize file contents; if you cannot read an uploaded file, ask the user for a URL or to paste it.\n" +
+        "synthesize file contents; if you cannot read an uploaded file, ask the user for a URL or to paste it. " +
+        FileInputResolver.Base64Guidance + "\n" +
         "\n" +
         "PDF results in ChatGPT: ChatGPT asks the user to approve file attachments before it delivers a PDF. " +
         "Before the first call that returns a PDF, tell the user to open the menu on the 'Allow once' button and " +

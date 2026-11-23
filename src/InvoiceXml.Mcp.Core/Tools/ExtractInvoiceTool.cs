@@ -44,7 +44,7 @@ public sealed class ExtractInvoiceTool
         "\n\n" +
         "Provide the document via EXACTLY ONE of these inputs:\n" +
         "• pdfUrl: a public https:// URL to the PDF; the server downloads it. PREFER THIS whenever a URL exists.\n" +
-        "• pdfBase64: the PDF as base64. Only practical for small files; larger base64 gets corrupted in a tool call.\n" +
+        "• pdfBase64: the PDF as base64. " + FileInputResolver.Base64Guidance + "\n" +
         "• xml: the invoice XML as text (targets 'json' and 'attachments').\n" +
         "• xmlUrl: a public https:// URL to the XML (targets 'json' and 'attachments').\n" +
         "If you set none or several, the result is an input error explaining what to fix.\n" +
@@ -64,7 +64,7 @@ public sealed class ExtractInvoiceTool
         [Description("A public https:// URL to the PDF; the server fetches it. Provide exactly one input.")]
         string? pdfUrl = null,
 
-        [Description("The PDF as base64 (small files only). Provide exactly one input.")]
+        [Description("The PDF as base64 (" + FileInputResolver.Base64ParameterNote + "). Provide exactly one input.")]
         string? pdfBase64 = null,
 
         [Description("For targets 'json' and 'attachments': the invoice XML (CII or UBL) as text. Provide exactly one input.")]
